@@ -609,9 +609,10 @@
         const keys = Object.keys(item.sourceLastSeenAt || {}).map((x) => String(x || "").toLowerCase());
         const hasMqtt = keys.includes("mqtt");
         const hasCoapStream = keys.includes("coap") || keys.includes("coap-mqtt");
-        const hasCoapSnapshot = keys.includes("rest") || String(item.lastSnapshotSource || "").toLowerCase() === "rest";
-        if (hasMqtt && (hasCoapStream || hasCoapSnapshot)) return "COAP+MQTT";
-        if (hasCoapStream || hasCoapSnapshot) return "COAP";
+        // In this deployment, REST snapshot is sourced from coap.mecho.top/sensor (CoAP bridge view).
+        const hasRestBridgeSnapshot = keys.includes("rest");
+        if (hasMqtt && (hasCoapStream || hasRestBridgeSnapshot)) return "COAP+MQTT";
+        if (hasCoapStream || hasRestBridgeSnapshot) return "COAP";
         if (hasMqtt) return "MQTT";
         return String(item.lastSource || "unknown").toUpperCase();
       }

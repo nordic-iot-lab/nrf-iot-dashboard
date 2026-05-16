@@ -43,6 +43,27 @@ function topicForNodeId(nodeId) {
   return `sensor/${String(nodeId).toLowerCase()}/data`;
 }
 
+function topicForNodeIdByTemplate(nodeId, topicTemplate) {
+  const id = String(nodeId || "")
+    .trim()
+    .toLowerCase();
+  const template = String(topicTemplate || "").trim();
+  if (!template) return topicForNodeId(id);
+  if (template.includes("{nodeId}")) {
+    return template.split("{nodeId}").join(id);
+  }
+  if (template.includes("+")) {
+    return template.replace("+", id);
+  }
+  return template;
+}
+
+function normalizeLimit(limit, fallback = 100) {
+  const n = Number.parseInt(String(limit || ""), 10);
+  const valid = Number.isFinite(n) ? n : fallback;
+  return Math.max(1, Math.min(500, valid));
+}
+
 function createHistoryStore(config) {
   const enabled =
     config.PG_ENABLED &&
@@ -70,13 +91,15 @@ function createHistoryStore(config) {
     query_timeout: Number(config.PG_QUERY_TIMEOUT_MS || 4000)
   });
 
+  const topicTemplate = config.HISTORY_TOPIC_TEMPLATE || config.MQTT_TOPIC || "sensor/+/data";
   console.log(`[pg] history store enabled -> ${config.PG_HOST}:${config.PG_PORT}/${config.PG_DATABASE}`);
+  console.log(`[pg] history topic template -> ${topicTemplate}`);
 
   return {
     isEnabled: () => true,
     getHistory: async (nodeId, limit) => {
-      const safeLimit = Math.max(1, Math.min(500, Number(limit || 100)));
-      const topic = topicForNodeId(nodeId);
+      const safeLimit = normalizeLimit(limit, 100);
+      const topic = topicForNodeIdByTemplate(nodeId, topicTemplate);
       const sql = `
         SELECT topic, payload, "timestamp"
         FROM mqtt_messages
@@ -98,5 +121,7 @@ function createHistoryStore(config) {
 module.exports = {
   createHistoryStore,
   topicForNodeId,
+  topicForNodeIdByTemplate,
+  normalizeLimit,
   buildNodeRecord
 };

@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { upsertNodeTelemetry, getAllNodes, getNodeHistory, resetStore } = require("../server/nodeStore");
+const { upsertNodeTelemetry, getAllNodes, getNode, getNodeHistory, resetStore } = require("../server/nodeStore");
 const { pullOnce } = require("../server/upstreamPuller");
 
 test("upstream object map format should map key as fallback node id", () => {
@@ -154,4 +154,14 @@ test("upstream topic-like coap marker should map to coap-mqtt", async () => {
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test("getNode should normalize nodeId lookup", () => {
+  resetStore();
+  upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 30 }, "a1b2", { source: "mqtt" });
+
+  const upper = getNode("A1B2");
+  const mixed = getNode(" a1B2 ");
+  assert.equal(upper.nodeId, "a1b2");
+  assert.equal(mixed.nodeId, "a1b2");
 });

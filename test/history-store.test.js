@@ -1,10 +1,30 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { topicForNodeId, buildNodeRecord } = require("../server/historyStore");
+const {
+  topicForNodeId,
+  topicForNodeIdByTemplate,
+  normalizeLimit,
+  buildNodeRecord
+} = require("../server/historyStore");
 
 test("topicForNodeId should map node id to sensor topic", () => {
   assert.equal(topicForNodeId("A1B2"), "sensor/a1b2/data");
+});
+
+test("topicForNodeIdByTemplate should map + wildcard topic", () => {
+  assert.equal(topicForNodeIdByTemplate("A1B2", "nrf/+/telemetry"), "nrf/a1b2/telemetry");
+});
+
+test("topicForNodeIdByTemplate should map {nodeId} topic", () => {
+  assert.equal(topicForNodeIdByTemplate("A1B2", "sensor/{nodeId}/data"), "sensor/a1b2/data");
+});
+
+test("normalizeLimit should clamp and fallback on invalid values", () => {
+  assert.equal(normalizeLimit(undefined, 100), 100);
+  assert.equal(normalizeLimit("abc", 100), 100);
+  assert.equal(normalizeLimit("9999", 100), 500);
+  assert.equal(normalizeLimit("-5", 100), 1);
 });
 
 test("buildNodeRecord should normalize history payload", () => {
@@ -25,4 +45,3 @@ test("buildNodeRecord should normalize history payload", () => {
   assert.equal(mapped.battery, 90);
   assert.ok(mapped.timestamp > 0);
 });
-

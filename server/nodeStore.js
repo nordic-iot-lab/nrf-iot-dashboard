@@ -261,7 +261,8 @@ function getAllNodes() {
 }
 
 function getNode(nodeId) {
-  return nodeMap.get(nodeId);
+  const key = normalizeStringId(nodeId);
+  return nodeMap.get(key);
 }
 
 function getNodeHistory(nodeId, limit = 100) {

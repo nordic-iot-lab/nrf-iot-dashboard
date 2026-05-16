@@ -35,10 +35,10 @@ function pickUserPropertySource(packet) {
     const values = Array.isArray(v) ? v : [v];
     for (const item of values) {
       const text = normalizeText(item);
+      if (!text) continue;
       if (key.includes("source") || key.includes("protocol") || key.includes("origin") || key.includes("ingest")) {
         if (hasCoapMarker(text)) return "coap-mqtt";
       }
-      if (hasCoapMarker(text)) return "coap-mqtt";
     }
   }
 

@@ -51,7 +51,11 @@ async function pullOnce(config) {
     headers.Authorization = `Bearer ${config.UPSTREAM_AUTH_TOKEN}`;
   }
 
-  const resp = await fetch(config.UPSTREAM_PULL_URL, { headers });
+  const timeoutMs = Math.max(1000, Number(config.UPSTREAM_PULL_TIMEOUT_MS || 5000));
+  const resp = await fetch(config.UPSTREAM_PULL_URL, {
+    headers,
+    signal: AbortSignal.timeout(timeoutMs)
+  });
   if (!resp.ok) {
     return { ok: false, reason: `http_${resp.status}`, count: 0 };
   }
