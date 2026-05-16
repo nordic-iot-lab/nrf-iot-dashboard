@@ -408,7 +408,7 @@
                   <option value="mqtt">MQTT</option>
                   <option value="coap-mqtt">COAP-MQTT</option>
                   <option value="coap">COAP</option>
-                  <option value="rest">REST</option>
+                  <option value="rest">COAP-REST</option>
                 </select>
               </label>
             </div>
@@ -657,7 +657,8 @@
           const badgeClass = sev === "alert" ? "badge alert" : sev === "warn" ? "badge warn" : "badge";
           const badgeText = sev === "alert" ? "ALERT" : sev === "warn" ? "LOW BAT" : "NORMAL";
           const sourceMain = String(item.lastSource || "unknown").toUpperCase();
-          const snapshotSource = String(item.lastSnapshotSource || "rest").toUpperCase();
+          const snapshotSourceRaw = String(item.lastSnapshotSource || "rest").toUpperCase();
+          const snapshotSource = snapshotSourceRaw === "REST" ? "COAP-REST" : snapshotSourceRaw;
           const snapshotBadge = snapshotSource ? `SNAP:${snapshotSource}` : "";
           card.innerHTML = `
             <div class="nodeTop">
