@@ -552,6 +552,33 @@
         return `${value}${unit}`;
       };
 
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function fmtSafe(value, unit = "") {
+        return escapeHtml(fmt(value, unit));
+      }
+
+      function buildMarkerPopupContent(item) {
+        const root = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = String(item.nodeId ?? "--");
+        root.appendChild(title);
+        root.appendChild(document.createElement("br"));
+        root.appendChild(document.createTextNode(`Status: ${fmt(item.status)}`));
+        root.appendChild(document.createElement("br"));
+        root.appendChild(document.createTextNode(`Temp: ${fmt(item.temperature)}`));
+        root.appendChild(document.createElement("br"));
+        root.appendChild(document.createTextNode(`Battery: ${fmt(item.battery)}`));
+        return root;
+      }
+
       function avg(items, key) {
         const vals = items.map((x) => Number(x[key])).filter((n) => Number.isFinite(n));
         if (!vals.length) return null;
@@ -636,20 +663,20 @@
             : String(item.lastSource || "unknown").toUpperCase();
           card.innerHTML = `
             <div class="nodeTop">
-              <div class="nodeId">${item.nodeId}</div>
+              <div class="nodeId">${escapeHtml(item.nodeId)}</div>
               <div style="display:flex;gap:6px;align-items:center;">
-                <div class="badge">${sourceBadge}</div>
+                <div class="badge">${escapeHtml(sourceBadge)}</div>
                 <div class="${badgeClass}">${badgeText}</div>
               </div>
             </div>
-            <div class="time">data: ${timeAgo(item.updatedAt)} | device seen: ${timeAgo(item.lastDeviceSeenAt)} | snapshot seen: ${timeAgo(item.lastSeenAt || item.updatedAt)}</div>
+            <div class="time">data: ${escapeHtml(timeAgo(item.updatedAt))} | device seen: ${escapeHtml(timeAgo(item.lastDeviceSeenAt))} | snapshot seen: ${escapeHtml(timeAgo(item.lastSeenAt || item.updatedAt))}</div>
             <div class="metrics">
-              <div class="metric"><div class="mk">Temp</div><div class="mv">${fmt(item.temperature, " C")}</div></div>
-              <div class="metric"><div class="mk">Humidity</div><div class="mv">${fmt(item.humidity, " %")}</div></div>
-              <div class="metric"><div class="mk">Battery</div><div class="mv">${fmt(item.battery)}</div></div>
-              <div class="metric"><div class="mk">Status</div><div class="mv">${fmt(item.status)}</div></div>
-              <div class="metric"><div class="mk">Latitude</div><div class="mv">${fmt(item.lat)}</div></div>
-              <div class="metric"><div class="mk">Longitude</div><div class="mv">${fmt(item.lng)}</div></div>
+              <div class="metric"><div class="mk">Temp</div><div class="mv">${fmtSafe(item.temperature, " C")}</div></div>
+              <div class="metric"><div class="mk">Humidity</div><div class="mv">${fmtSafe(item.humidity, " %")}</div></div>
+              <div class="metric"><div class="mk">Battery</div><div class="mv">${fmtSafe(item.battery)}</div></div>
+              <div class="metric"><div class="mk">Status</div><div class="mv">${fmtSafe(item.status)}</div></div>
+              <div class="metric"><div class="mk">Latitude</div><div class="mv">${fmtSafe(item.lat)}</div></div>
+              <div class="metric"><div class="mk">Longitude</div><div class="mv">${fmtSafe(item.lng)}</div></div>
             </div>
           `;
 
@@ -690,9 +717,7 @@
             fillColor: color,
             fillOpacity: 0.9
           });
-          marker.bindPopup(
-            `<strong>${item.nodeId}</strong><br/>Status: ${fmt(item.status)}<br/>Temp: ${fmt(item.temperature)}<br/>Battery: ${fmt(item.battery)}`
-          );
+          marker.bindPopup(buildMarkerPopupContent(item));
           marker.addTo(markerLayer);
           marker.on("click", () => {
             selectedNodeId = item.nodeId;

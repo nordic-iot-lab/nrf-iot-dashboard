@@ -1,6 +1,8 @@
 const nodeMap = new Map();
 const nodeHistoryMap = new Map();
 const MAX_NODE_HISTORY = 300;
+const MAX_SOURCE_RAW_BYTES = 120000;
+const MAX_HISTORY_RAW_BYTES = 32000;
 
 function stableNormalize(value) {
   if (Array.isArray(value)) {
@@ -19,6 +21,14 @@ function stableNormalize(value) {
 
 function stableStringify(value) {
   return JSON.stringify(stableNormalize(value));
+}
+
+function safeStableStringify(value, maxBytes) {
+  const str = stableStringify(value);
+  if (str.length <= maxBytes) {
+    return str;
+  }
+  return str.slice(0, maxBytes);
 }
 
 function normalizeStringId(value) {
@@ -169,6 +179,20 @@ function appendNodeHistory(nodeId, point) {
   nodeHistoryMap.set(key, next);
 }
 
+function trimRawPayload(raw, maxBytes) {
+  if (raw === null || raw === undefined) return raw;
+  if (typeof raw === "string") {
+    return raw.length > maxBytes ? raw.slice(0, maxBytes) : raw;
+  }
+  if (typeof raw !== "object") return raw;
+  const text = safeStableStringify(raw, maxBytes);
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { _truncated: true, _text: text };
+  }
+}
+
 function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
   const source = options.source || "unknown";
   const isSnapshot = options.isSnapshot === true;
@@ -197,8 +221,8 @@ function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
 
   const sourceUpdatedAt = { ...(prev.sourceUpdatedAt || {}) };
   const prevSourceRaw = prev.sourceRaw && prev.sourceRaw[source] ? prev.sourceRaw[source] : null;
-  const currentSourceRaw = normalized.raw || null;
-  const sourceChanged = stableStringify(prevSourceRaw) !== stableStringify(currentSourceRaw);
+  const currentSourceRaw = trimRawPayload(normalized.raw || null, MAX_SOURCE_RAW_BYTES);
+  const sourceChanged = safeStableStringify(prevSourceRaw, MAX_SOURCE_RAW_BYTES) !== safeStableStringify(currentSourceRaw, MAX_SOURCE_RAW_BYTES);
   sourceUpdatedAt[source] = sourceChanged ? now : sourceUpdatedAt[source] || now;
   merged.sourceUpdatedAt = sourceUpdatedAt;
 
@@ -218,7 +242,7 @@ function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
     humidity: merged.humidity ?? null,
     battery: merged.battery ?? null,
     source,
-    raw: normalized.raw || {}
+    raw: trimRawPayload(normalized.raw || {}, MAX_HISTORY_RAW_BYTES)
   });
   return nodeMap.get(normalized.nodeId);
 }
