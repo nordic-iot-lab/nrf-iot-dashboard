@@ -77,7 +77,7 @@ app.get("/api/nodes/:nodeId/history", async (req, res) => {
 // Optional ingestion endpoint for your server-side bridge:
 // POST /api/ingest with json: { nodeId, temperature, humidity, battery, ... }
 app.post("/api/ingest", (req, res) => {
-  const saved = upsertNodeTelemetry(req.body || {}, req.body?.nodeId);
+  const saved = upsertNodeTelemetry(req.body || {}, req.body?.nodeId, { source: "api" });
   res.json({ ok: true, item: saved });
 });
 

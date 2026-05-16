@@ -41,7 +41,7 @@ async function pullOnce(config) {
 
   let count = 0;
   for (const item of items) {
-    upsertNodeTelemetry(item.payload, item.fallbackNodeId);
+    upsertNodeTelemetry(item.payload, item.fallbackNodeId, { source: "rest" });
     count += 1;
   }
 

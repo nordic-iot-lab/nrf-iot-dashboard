@@ -33,7 +33,7 @@ function startMqttIngest(config) {
     }
 
     const topicNodeId = parseNodeIdFromTopic(topic);
-    const saved = upsertNodeTelemetry(payload, topicNodeId);
+    const saved = upsertNodeTelemetry(payload, topicNodeId, { source: "mqtt" });
     console.log(`[mqtt] node=${saved.nodeId} temp=${saved.temperature} hum=${saved.humidity} battery=${saved.battery}`);
   });
 

@@ -146,7 +146,8 @@ function normalizePayload(payload, fallbackNodeId) {
   };
 }
 
-function upsertNodeTelemetry(payload, fallbackNodeId) {
+function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
+  const source = options.source || "unknown";
   const normalized = normalizePayload(payload, fallbackNodeId);
   const prev = nodeMap.get(normalized.nodeId) || {};
   const now = Date.now();
@@ -167,6 +168,22 @@ function upsertNodeTelemetry(payload, fallbackNodeId) {
   const changed = stableStringify(prevRaw) !== stableStringify(normalized.raw || null);
   merged.lastSeenAt = now;
   merged.updatedAt = changed ? now : prev.updatedAt || now;
+  merged.lastSource = source;
+
+  const sourceUpdatedAt = { ...(prev.sourceUpdatedAt || {}) };
+  const prevSourceRaw = prev.sourceRaw && prev.sourceRaw[source] ? prev.sourceRaw[source] : null;
+  const currentSourceRaw = normalized.raw || null;
+  const sourceChanged = stableStringify(prevSourceRaw) !== stableStringify(currentSourceRaw);
+  sourceUpdatedAt[source] = sourceChanged ? now : sourceUpdatedAt[source] || now;
+  merged.sourceUpdatedAt = sourceUpdatedAt;
+
+  const sourceLastSeenAt = { ...(prev.sourceLastSeenAt || {}) };
+  sourceLastSeenAt[source] = now;
+  merged.sourceLastSeenAt = sourceLastSeenAt;
+
+  const sourceRaw = { ...(prev.sourceRaw || {}) };
+  sourceRaw[source] = currentSourceRaw;
+  merged.sourceRaw = sourceRaw;
 
   nodeMap.set(normalized.nodeId, merged);
   return nodeMap.get(normalized.nodeId);

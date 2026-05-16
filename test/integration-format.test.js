@@ -50,3 +50,17 @@ test("unchanged payload should not bump updatedAt but should bump lastSeenAt", a
   assert.equal(second.updatedAt, first.updatedAt);
   assert.ok(second.lastSeenAt >= first.lastSeenAt);
 });
+
+test("source fields should be tracked per protocol", async () => {
+  resetStore();
+  const first = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "mqtt" });
+  await new Promise((r) => setTimeout(r, 3));
+  const second = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "rest" });
+
+  assert.equal(second.lastSource, "rest");
+  assert.ok(second.sourceLastSeenAt.mqtt > 0);
+  assert.ok(second.sourceLastSeenAt.rest > 0);
+  assert.ok(second.sourceUpdatedAt.mqtt > 0);
+  assert.ok(second.sourceUpdatedAt.rest > 0);
+  assert.equal(second.updatedAt, first.updatedAt);
+});

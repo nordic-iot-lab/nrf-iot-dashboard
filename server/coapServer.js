@@ -40,7 +40,7 @@ function startCoapIngest(config) {
     }
 
     const fallbackNodeId = getNodeIdFromPath(pathName);
-    const saved = upsertNodeTelemetry(payload, fallbackNodeId);
+    const saved = upsertNodeTelemetry(payload, fallbackNodeId, { source: "coap" });
 
     res.code = "2.04";
     res.end("ok");

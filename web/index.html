@@ -168,6 +168,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
+        flex-wrap: wrap;
       }
       .check {
         display: inline-flex;
@@ -400,6 +401,16 @@
             <button id="autoBtn" class="secondary">Auto: ON</button>
             <div class="toggles">
               <label class="check"><input id="gpsOnly" type="checkbox" /> GPS only</label>
+              <label class="check">
+                Source
+                <select id="sourceFilter" style="height:30px;padding:0 8px;">
+                  <option value="all">ALL</option>
+                  <option value="mqtt">MQTT</option>
+                  <option value="coap">COAP</option>
+                  <option value="rest">REST</option>
+                  <option value="api">API</option>
+                </select>
+              </label>
             </div>
           </div>
           <div id="grid" class="nodeList"></div>
@@ -451,6 +462,7 @@
       const filterInput = document.getElementById("filterInput");
       const sortSelect = document.getElementById("sortSelect");
       const gpsOnlyInput = document.getElementById("gpsOnly");
+      const sourceFilter = document.getElementById("sourceFilter");
       const refreshBtn = document.getElementById("refreshBtn");
       const autoBtn = document.getElementById("autoBtn");
       const healthDot = document.getElementById("healthDot");
@@ -540,7 +552,11 @@
         const filterText = filterInput.value.trim().toLowerCase();
         const sortBy = sortSelect.value;
         const gpsOnly = gpsOnlyInput.checked;
+        const source = sourceFilter.value;
         let items = latest.filter((x) => String(x.nodeId).toLowerCase().includes(filterText));
+        if (source !== "all") {
+          items = items.filter((x) => String(x.lastSource || "").toLowerCase() === source);
+        }
         if (gpsOnly) {
           items = items.filter((x) => isFiniteCoord(x.lat) && isFiniteCoord(x.lng));
         }
@@ -567,12 +583,16 @@
           card.className = `nodeCard${selectedNodeId === item.nodeId ? " selected" : ""}${sev === "alert" ? " alert" : sev === "warn" ? " warn" : ""}`;
           const badgeClass = sev === "alert" ? "badge alert" : sev === "warn" ? "badge warn" : "badge";
           const badgeText = sev === "alert" ? "ALERT" : sev === "warn" ? "LOW BAT" : "NORMAL";
+          const sourceBadge = String(item.lastSource || "unknown").toUpperCase();
           card.innerHTML = `
             <div class="nodeTop">
               <div class="nodeId">${item.nodeId}</div>
-              <div class="${badgeClass}">${badgeText}</div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <div class="badge">${sourceBadge}</div>
+                <div class="${badgeClass}">${badgeText}</div>
+              </div>
             </div>
-            <div class="time">${timeAgo(item.updatedAt)}</div>
+            <div class="time">data: ${timeAgo(item.updatedAt)} | seen: ${timeAgo(item.lastSeenAt || item.updatedAt)}</div>
             <div class="metrics">
               <div class="metric"><div class="mk">Temp</div><div class="mv">${fmt(item.temperature, " C")}</div></div>
               <div class="metric"><div class="mk">Humidity</div><div class="mv">${fmt(item.humidity, " %")}</div></div>
@@ -743,6 +763,7 @@
       filterInput.addEventListener("input", draw);
       sortSelect.addEventListener("change", draw);
       gpsOnlyInput.addEventListener("change", draw);
+      sourceFilter.addEventListener("change", draw);
       autoBtn.addEventListener("click", () => setAutoMode(!autoMode));
 
       initMap();
