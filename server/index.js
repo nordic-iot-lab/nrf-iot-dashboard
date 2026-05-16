@@ -3,7 +3,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const { startMqttIngest } = require("./mqttClient");
 const { startCoapIngest } = require("./coapServer");
-const { upsertNodeTelemetry, getAllNodes, getNode } = require("./nodeStore");
+const { upsertNodeTelemetry, getAllNodes, getNode, getNodeHistory } = require("./nodeStore");
 const { startUpstreamPuller, pullOnce } = require("./upstreamPuller");
 const { createHistoryStore } = require("./historyStore");
 
@@ -63,10 +63,21 @@ app.get("/api/nodes/:nodeId/history", async (req, res) => {
   try {
     const nodeId = String(req.params.nodeId || "").toLowerCase();
     const limit = Number(req.query.limit || 100);
-    const items = await historyStore.getHistory(nodeId, limit);
+    let items = [];
+    let source = "postgres";
+    try {
+      items = await historyStore.getHistory(nodeId, limit);
+      if (!items.length) {
+        source = "memory";
+        items = getNodeHistory(nodeId, limit);
+      }
+    } catch (_err) {
+      source = "memory";
+      items = getNodeHistory(nodeId, limit);
+    }
     res.json({
       nodeId,
-      source: historyStore.isEnabled() ? "postgres" : "disabled",
+      source,
       items
     });
   } catch (err) {

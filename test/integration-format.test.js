@@ -1,7 +1,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { upsertNodeTelemetry, getAllNodes, resetStore } = require("../server/nodeStore");
+const { upsertNodeTelemetry, getAllNodes, getNodeHistory, resetStore } = require("../server/nodeStore");
+const { pullOnce } = require("../server/upstreamPuller");
 
 test("upstream object map format should map key as fallback node id", () => {
   resetStore();
@@ -12,6 +13,13 @@ test("upstream object map format should map key as fallback node id", () => {
   const ids = items.map((x) => x.nodeId).sort();
 
   assert.deepEqual(ids, ["a1b2", "c3d4"]);
+});
+
+test("zero coordinates should be treated as missing gps", () => {
+  resetStore();
+  const row = upsertNodeTelemetry({ mac_last4: "9512", lat: 0, lng: 0 }, "9512", { source: "mqtt" });
+  assert.equal(row.lat, null);
+  assert.equal(row.lng, null);
 });
 
 test("istag-like payload fields should normalize correctly", () => {
@@ -63,4 +71,84 @@ test("source fields should be tracked per protocol", async () => {
   assert.ok(second.sourceUpdatedAt.mqtt > 0);
   assert.ok(second.sourceUpdatedAt.rest > 0);
   assert.equal(second.updatedAt, first.updatedAt);
+});
+
+test("rest snapshot should not bump device seen time", async () => {
+  resetStore();
+  const first = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "mqtt" });
+  const firstDeviceSeenAt = first.lastDeviceSeenAt;
+  await new Promise((r) => setTimeout(r, 3));
+  const second = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "rest" });
+
+  assert.equal(second.lastDeviceSeenAt, firstDeviceSeenAt);
+  assert.ok(second.lastSeenAt >= first.lastSeenAt);
+});
+
+test("mqtt and coap sources should bump device seen time", async () => {
+  resetStore();
+  const first = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "mqtt" });
+  await new Promise((r) => setTimeout(r, 3));
+  const second = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "coap-mqtt" });
+
+  assert.ok(second.lastDeviceSeenAt >= first.lastDeviceSeenAt);
+});
+
+test("in-memory node history should keep recent samples", async () => {
+  resetStore();
+  upsertNodeTelemetry({ mac_last4: "9512", temperature: 29 }, "9512", { source: "mqtt" });
+  await new Promise((r) => setTimeout(r, 3));
+  upsertNodeTelemetry({ mac_last4: "9512", temperature: 30 }, "9512", { source: "mqtt" });
+  await new Promise((r) => setTimeout(r, 3));
+  upsertNodeTelemetry({ mac_last4: "9512", temperature: 31 }, "9512", { source: "rest", isSnapshot: true });
+
+  const history = getNodeHistory("9512", 2);
+  assert.equal(history.length, 2);
+  assert.equal(history[0].temperature, 31);
+  assert.equal(history[1].temperature, 30);
+});
+
+test("upstream payload source should override rest default", async () => {
+  resetStore();
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      "0001": {
+        source: "coap",
+        temp_c: 32
+      }
+    })
+  });
+
+  try {
+    const result = await pullOnce({ UPSTREAM_PULL_URL: "http://fake.local/sensor" });
+    assert.equal(result.ok, true);
+    const row = getAllNodes().find((x) => x.nodeId === "0001");
+    assert.equal(row.lastSource, "coap");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("upstream topic-like coap marker should map to coap-mqtt", async () => {
+  resetStore();
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      "9512": {
+        topic: "coap/9512",
+        temperature: 30
+      }
+    })
+  });
+
+  try {
+    const result = await pullOnce({ UPSTREAM_PULL_URL: "http://fake.local/sensor" });
+    assert.equal(result.ok, true);
+    const row = getAllNodes().find((x) => x.nodeId === "9512");
+    assert.equal(row.lastSource, "coap-mqtt");
+  } finally {
+    global.fetch = originalFetch;
+  }
 });

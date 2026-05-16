@@ -1,4 +1,6 @@
 const nodeMap = new Map();
+const nodeHistoryMap = new Map();
+const MAX_NODE_HISTORY = 300;
 
 function stableNormalize(value) {
   if (Array.isArray(value)) {
@@ -44,6 +46,7 @@ function toNumber(value) {
 function sanitizeLat(value) {
   const n = toNumber(value);
   if (n === null) return null;
+  if (n === 0) return null;
   if (n < -90 || n > 90) return null;
   return n;
 }
@@ -51,6 +54,7 @@ function sanitizeLat(value) {
 function sanitizeLng(value) {
   const n = toNumber(value);
   if (n === null) return null;
+  if (n === 0) return null;
   if (n < -180 || n > 180) return null;
   return n;
 }
@@ -146,8 +150,28 @@ function normalizePayload(payload, fallbackNodeId) {
   };
 }
 
+function shouldBumpDeviceSeen(source, isSnapshot) {
+  if (isSnapshot) return false;
+  const normalized = String(source || "")
+    .trim()
+    .toLowerCase();
+  if (!normalized || normalized === "unknown" || normalized === "rest") {
+    return false;
+  }
+  return true;
+}
+
+function appendNodeHistory(nodeId, point) {
+  const key = normalizeStringId(nodeId) || "unknown";
+  const prev = nodeHistoryMap.get(key) || [];
+  const next = prev.length >= MAX_NODE_HISTORY ? prev.slice(prev.length - MAX_NODE_HISTORY + 1) : prev.slice();
+  next.push(point);
+  nodeHistoryMap.set(key, next);
+}
+
 function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
   const source = options.source || "unknown";
+  const isSnapshot = options.isSnapshot === true;
   const normalized = normalizePayload(payload, fallbackNodeId);
   const prev = nodeMap.get(normalized.nodeId) || {};
   const now = Date.now();
@@ -167,6 +191,7 @@ function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
   const prevRaw = prev.raw || null;
   const changed = stableStringify(prevRaw) !== stableStringify(normalized.raw || null);
   merged.lastSeenAt = now;
+  merged.lastDeviceSeenAt = shouldBumpDeviceSeen(source, isSnapshot) ? now : prev.lastDeviceSeenAt || null;
   merged.updatedAt = changed ? now : prev.updatedAt || now;
   merged.lastSource = source;
 
@@ -186,6 +211,15 @@ function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
   merged.sourceRaw = sourceRaw;
 
   nodeMap.set(normalized.nodeId, merged);
+  appendNodeHistory(normalized.nodeId, {
+    nodeId: normalized.nodeId,
+    timestamp: now,
+    temperature: merged.temperature ?? null,
+    humidity: merged.humidity ?? null,
+    battery: merged.battery ?? null,
+    source,
+    raw: normalized.raw || {}
+  });
   return nodeMap.get(normalized.nodeId);
 }
 
@@ -197,13 +231,22 @@ function getNode(nodeId) {
   return nodeMap.get(nodeId);
 }
 
+function getNodeHistory(nodeId, limit = 100) {
+  const key = normalizeStringId(nodeId) || "unknown";
+  const all = nodeHistoryMap.get(key) || [];
+  const safeLimit = Math.max(1, Math.min(500, Number(limit || 100)));
+  return all.slice(-safeLimit).reverse();
+}
+
 function resetStore() {
   nodeMap.clear();
+  nodeHistoryMap.clear();
 }
 
 module.exports = {
   upsertNodeTelemetry,
   getAllNodes,
   getNode,
+  getNodeHistory,
   resetStore
 };

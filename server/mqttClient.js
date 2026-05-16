@@ -1,6 +1,7 @@
 const mqtt = require("mqtt");
 const { upsertNodeTelemetry } = require("./nodeStore");
 const { parseNodeIdFromTopic } = require("./topicParser");
+const { detectMqttLogicalSource } = require("./sourceClassifier");
 
 function startMqttIngest(config) {
   const client = mqtt.connect(config.MQTT_BROKER_URL, {
@@ -22,7 +23,7 @@ function startMqttIngest(config) {
     });
   });
 
-  client.on("message", (topic, message) => {
+  client.on("message", (topic, message, packet) => {
     const text = message.toString("utf-8");
     let payload;
     try {
@@ -33,7 +34,8 @@ function startMqttIngest(config) {
     }
 
     const topicNodeId = parseNodeIdFromTopic(topic);
-    const saved = upsertNodeTelemetry(payload, topicNodeId, { source: "mqtt" });
+    const logicalSource = detectMqttLogicalSource(payload, packet);
+    const saved = upsertNodeTelemetry(payload, topicNodeId, { source: logicalSource });
     console.log(`[mqtt] node=${saved.nodeId} temp=${saved.temperature} hum=${saved.humidity} battery=${saved.battery}`);
   });
 

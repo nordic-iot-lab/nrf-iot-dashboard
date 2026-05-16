@@ -1,5 +1,15 @@
 const { upsertNodeTelemetry } = require("./nodeStore");
 
+function normalizeSource(value) {
+  const text = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (text === "coap" || text === "mqtt" || text === "rest" || text === "api") {
+    return text;
+  }
+  return "";
+}
+
 function normalizeItems(data) {
   if (Array.isArray(data)) {
     return data.map((item) => ({ payload: item, fallbackNodeId: item?.nodeId || item?.node_id }));
@@ -19,6 +29,16 @@ function normalizeItems(data) {
     }));
   }
   return [];
+}
+
+function guessSourceFromTopicLikeFields(payload) {
+  const text = String(payload?.topic || payload?.source_topic || payload?.ingest_topic || "")
+    .trim()
+    .toLowerCase();
+  if (text.startsWith("coap/") || text.includes("/coap/") || text.includes("coap://")) {
+    return "coap-mqtt";
+  }
+  return "";
 }
 
 async function pullOnce(config) {
@@ -41,7 +61,10 @@ async function pullOnce(config) {
 
   let count = 0;
   for (const item of items) {
-    upsertNodeTelemetry(item.payload, item.fallbackNodeId, { source: "rest" });
+    const payloadSource = normalizeSource(item.payload?.source);
+    const guessed = guessSourceFromTopicLikeFields(item.payload);
+    const source = guessed || payloadSource || "rest";
+    upsertNodeTelemetry(item.payload, item.fallbackNodeId, { source, isSnapshot: true });
     count += 1;
   }
 
