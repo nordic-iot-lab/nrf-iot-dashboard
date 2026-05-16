@@ -21,6 +21,7 @@ Build a web system that pulls nRF node data from your server path (MQTT and/or H
 ## 3. Proposed architecture
 
 1. Data ingestion layer
+   - Input A0: CoAP direct uplink to this service (`coap://host:5683/telemetry`)
    - Input A: MQTT from broker (`nrf/+/telemetry`)
    - Input B: HTTP ingest endpoint from your existing server bridge
    - Input C: Active pull from your server REST path (`UPSTREAM_PULL_URL`)
@@ -59,7 +60,7 @@ Fallback logic:
 
 1. Phase A (done in this version)
    - Local runnable backend + frontend
-   - MQTT ingest + HTTP ingest + upstream pull + node dashboard
+   - CoAP ingest + MQTT ingest + HTTP ingest + upstream pull + node dashboard
 2. Phase B
    - Connect to your actual broker and server route
    - Add mapping table for custom parameters per node type

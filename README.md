@@ -6,6 +6,7 @@ Data flow: nRF -> CoAP/MQTT -> your server/broker -> this dashboard backend -> w
 ## What is included
 
 - MQTT ingest from your broker topic (default: `nrf/+/telemetry`)
+- CoAP ingest server (default `coap://0.0.0.0:5683`)
 - Optional HTTP ingest endpoint for bridge service: `POST /api/ingest`
 - Optional puller from your own server endpoint: `UPSTREAM_PULL_URL`
 - Node telemetry APIs:
@@ -43,6 +44,14 @@ UPSTREAM_PULL_INTERVAL_MS=8000
 UPSTREAM_AUTH_TOKEN=your_token_if_needed
 ```
 
+CoAP is enabled by default. You can tune it:
+
+```env
+COAP_ENABLED=true
+COAP_HOST=0.0.0.0
+COAP_PORT=5683
+```
+
 ## MQTT payload example
 
 Topic example:
@@ -66,6 +75,23 @@ Payload example:
 ```
 
 If `nodeId` is missing in payload, backend falls back to topic segment (e.g. `nrf-001` from `nrf/nrf-001/telemetry`).
+
+## CoAP payload example
+
+Endpoint:
+
+```text
+coap://your-server-ip:5683/telemetry
+```
+
+Or include node id in path:
+
+```text
+coap://your-server-ip:5683/telemetry/nrf-001
+```
+
+Method: `POST` or `PUT`  
+Payload: JSON (same schema as MQTT payload).
 
 ## HTTP ingest example
 

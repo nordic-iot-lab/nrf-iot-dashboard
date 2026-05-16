@@ -2,6 +2,7 @@ const path = require("path");
 const express = require("express");
 const dotenv = require("dotenv");
 const { startMqttIngest } = require("./mqttClient");
+const { startCoapIngest } = require("./coapServer");
 const { upsertNodeTelemetry, getAllNodes, getNode } = require("./nodeStore");
 const { startUpstreamPuller, pullOnce } = require("./upstreamPuller");
 
@@ -18,12 +19,16 @@ const config = {
   MQTT_USERNAME: process.env.MQTT_USERNAME || "",
   MQTT_PASSWORD: process.env.MQTT_PASSWORD || "",
   MQTT_CLIENT_ID: process.env.MQTT_CLIENT_ID || `nordic-web-dashboard-${Date.now()}`,
+  COAP_ENABLED: process.env.COAP_ENABLED !== "false",
+  COAP_HOST: process.env.COAP_HOST || "0.0.0.0",
+  COAP_PORT: Number(process.env.COAP_PORT || 5683),
   UPSTREAM_PULL_URL: process.env.UPSTREAM_PULL_URL || "",
   UPSTREAM_PULL_INTERVAL_MS: Number(process.env.UPSTREAM_PULL_INTERVAL_MS || 8000),
   UPSTREAM_AUTH_TOKEN: process.env.UPSTREAM_AUTH_TOKEN || ""
 };
 
 startMqttIngest(config);
+startCoapIngest(config);
 startUpstreamPuller(config);
 
 app.get("/api/health", (_req, res) => {
