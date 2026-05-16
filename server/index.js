@@ -5,6 +5,7 @@ const { startMqttIngest } = require("./mqttClient");
 const { startCoapIngest } = require("./coapServer");
 const { upsertNodeTelemetry, getAllNodes, getNode } = require("./nodeStore");
 const { startUpstreamPuller, pullOnce } = require("./upstreamPuller");
+const { createHistoryStore } = require("./historyStore");
 
 dotenv.config();
 
@@ -24,12 +25,22 @@ const config = {
   COAP_PORT: Number(process.env.COAP_PORT || 5683),
   UPSTREAM_PULL_URL: process.env.UPSTREAM_PULL_URL || "",
   UPSTREAM_PULL_INTERVAL_MS: Number(process.env.UPSTREAM_PULL_INTERVAL_MS || 8000),
-  UPSTREAM_AUTH_TOKEN: process.env.UPSTREAM_AUTH_TOKEN || ""
+  UPSTREAM_AUTH_TOKEN: process.env.UPSTREAM_AUTH_TOKEN || "",
+  PG_ENABLED: process.env.PG_ENABLED === "true",
+  PG_HOST: process.env.PG_HOST || "",
+  PG_PORT: Number(process.env.PG_PORT || 5432),
+  PG_DATABASE: process.env.PG_DATABASE || "",
+  PG_USER: process.env.PG_USER || "",
+  PG_PASSWORD: process.env.PG_PASSWORD || "",
+  PG_SSL: process.env.PG_SSL === "true",
+  PG_CONNECT_TIMEOUT_MS: Number(process.env.PG_CONNECT_TIMEOUT_MS || 3000),
+  PG_QUERY_TIMEOUT_MS: Number(process.env.PG_QUERY_TIMEOUT_MS || 4000)
 };
 
 startMqttIngest(config);
 startCoapIngest(config);
 startUpstreamPuller(config);
+const historyStore = createHistoryStore(config);
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "nordic-web-dashboard", ts: Date.now() });
@@ -46,6 +57,21 @@ app.get("/api/nodes/:nodeId", (req, res) => {
     return;
   }
   res.json(found);
+});
+
+app.get("/api/nodes/:nodeId/history", async (req, res) => {
+  try {
+    const nodeId = String(req.params.nodeId || "").toLowerCase();
+    const limit = Number(req.query.limit || 100);
+    const items = await historyStore.getHistory(nodeId, limit);
+    res.json({
+      nodeId,
+      source: historyStore.isEnabled() ? "postgres" : "disabled",
+      items
+    });
+  } catch (err) {
+    res.status(500).json({ error: "history_query_failed", reason: err.message });
+  }
 });
 
 // Optional ingestion endpoint for your server-side bridge:

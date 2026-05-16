@@ -22,6 +22,8 @@ Data flow: nRF -> CoAP/MQTT -> your server/broker -> this dashboard backend -> w
   - voltage
   - co2
 - GPS map view (OpenStreetMap + Leaflet) with node markers
+- Node alarm highlight (`status=alert`, high temperature, low battery)
+- Historical trend API and mini charts per selected node
 
 ## Mecho integration profile
 
@@ -48,6 +50,24 @@ Normalization highlights:
 - Battery aliases: `battery`, `battery_mv`, `battery_pct`
 - Status aliases: `status`, `state`
 - ISTAG fields like `events`, `urgent`, `vibration_mg`, `tilt_deg` are preserved
+
+## History API
+
+When PostgreSQL is enabled, query node history from `mqtt_messages`:
+
+- `GET /api/nodes/:nodeId/history?limit=100`
+
+Response:
+
+```json
+{
+  "nodeId": "a1b2",
+  "source": "postgres",
+  "items": [
+    {"nodeId":"a1b2","timestamp":1778920000000,"temperature":30.1,"humidity":55,"battery":87}
+  ]
+}
+```
 
 ## Quick start
 

@@ -19,23 +19,19 @@
     <style>
       :root {
         --bg: #0d1318;
-        --bg-soft: #121a21;
         --surface: #1b252f;
-        --surface-2: #22313d;
         --text: #dbe9f5;
         --muted: #8ea4b7;
         --line: #324654;
         --accent: #46d7d9;
-        --accent-2: #63ff9f;
+        --ok: #63ff9f;
         --warn: #ffb05e;
         --danger: #ff7e83;
         --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
       }
-
       * {
         box-sizing: border-box;
       }
-
       body {
         margin: 0;
         font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
@@ -45,13 +41,11 @@
           var(--bg);
         color: var(--text);
       }
-
       .shell {
-        max-width: 1400px;
+        max-width: 1480px;
         margin: 0 auto;
-        padding: 18px 18px 26px;
+        padding: 18px;
       }
-
       .head {
         display: flex;
         justify-content: space-between;
@@ -59,7 +53,6 @@
         gap: 12px;
         flex-wrap: wrap;
       }
-
       .title {
         margin: 0;
         font-family: "Barlow Condensed", sans-serif;
@@ -67,13 +60,11 @@
         line-height: 0.95;
         letter-spacing: 0;
       }
-
       .subtitle {
         margin-top: 8px;
         color: var(--muted);
         font-size: 14px;
       }
-
       .pill {
         display: inline-flex;
         align-items: center;
@@ -85,34 +76,21 @@
         font-size: 12px;
         color: var(--muted);
       }
-
       .dot {
         width: 8px;
         height: 8px;
         border-radius: 50%;
         background: var(--warn);
-        box-shadow: 0 0 0 0 rgba(255, 176, 94, 0.6);
-        animation: pulse 1.8s infinite;
       }
-
       .dot.ok {
-        background: var(--accent-2);
-        box-shadow: 0 0 0 0 rgba(99, 255, 159, 0.65);
+        background: var(--ok);
       }
-
-      @keyframes pulse {
-        0% { box-shadow: 0 0 0 0 currentColor; }
-        70% { box-shadow: 0 0 0 8px rgba(0, 0, 0, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
-      }
-
       .kpis {
         margin-top: 14px;
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 10px;
       }
-
       .kpi {
         background: linear-gradient(170deg, rgba(40, 59, 73, 0.8), rgba(24, 36, 45, 0.9));
         border: 1px solid var(--line);
@@ -120,29 +98,25 @@
         padding: 10px 12px;
         box-shadow: var(--shadow);
       }
-
       .kpiLabel {
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         color: var(--muted);
       }
-
       .kpiValue {
         margin-top: 4px;
         font-family: "Barlow Condensed", sans-serif;
         font-size: 34px;
         line-height: 0.95;
       }
-
       .board {
         margin-top: 12px;
         display: grid;
         grid-template-columns: 420px minmax(0, 1fr);
         gap: 12px;
-        min-height: calc(100vh - 210px);
+        min-height: calc(100vh - 208px);
       }
-
       .panel {
         background: linear-gradient(160deg, rgba(29, 42, 53, 0.86), rgba(20, 30, 38, 0.94));
         border: 1px solid var(--line);
@@ -150,20 +124,17 @@
         box-shadow: var(--shadow);
         overflow: hidden;
       }
-
       .panelHead {
         padding: 10px 12px;
         border-bottom: 1px solid var(--line);
         background: rgba(11, 18, 24, 0.5);
       }
-
       .panelTitle {
         margin: 0;
         font-family: "Barlow Condensed", sans-serif;
         font-size: 24px;
         line-height: 1;
       }
-
       .tools {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -171,7 +142,6 @@
         padding: 10px;
         border-bottom: 1px solid var(--line);
       }
-
       input,
       select,
       button {
@@ -184,25 +154,21 @@
         font-size: 13px;
         padding: 0 10px;
       }
-
       button {
         background: linear-gradient(160deg, #2b5068, #21455a);
         border-color: #4b7d99;
         cursor: pointer;
         font-weight: 600;
       }
-
       button.secondary {
         background: #111b23;
       }
-
       .toggles {
         grid-column: span 2;
         display: flex;
         align-items: center;
         gap: 10px;
       }
-
       .check {
         display: inline-flex;
         align-items: center;
@@ -210,13 +176,11 @@
         font-size: 13px;
         color: var(--muted);
       }
-
       .check input {
         width: 16px;
         height: 16px;
         margin: 0;
       }
-
       .nodeList {
         padding: 10px;
         max-height: calc(100vh - 390px);
@@ -224,70 +188,91 @@
         display: grid;
         gap: 8px;
       }
-
       .nodeCard {
         border: 1px solid #395061;
         border-radius: 8px;
         background: rgba(14, 24, 31, 0.82);
         padding: 10px;
         cursor: pointer;
-        transition: transform 120ms ease, border-color 120ms ease;
       }
-
       .nodeCard:hover {
-        transform: translateY(-1px);
         border-color: var(--accent);
       }
-
+      .nodeCard.selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px rgba(70, 215, 217, 0.35);
+      }
+      .nodeCard.alert {
+        border-color: rgba(255, 126, 131, 0.9);
+        background: rgba(80, 22, 29, 0.35);
+      }
+      .nodeCard.warn {
+        border-color: rgba(255, 176, 94, 0.85);
+        background: rgba(95, 60, 18, 0.3);
+      }
       .nodeTop {
         display: flex;
         justify-content: space-between;
         gap: 8px;
         align-items: baseline;
       }
-
       .nodeId {
         font-family: "Barlow Condensed", sans-serif;
         font-size: 26px;
         line-height: 1;
       }
-
       .time {
         font-size: 11px;
         color: var(--muted);
       }
-
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid #3d5362;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .badge.alert {
+        border-color: rgba(255, 126, 131, 0.9);
+        color: var(--danger);
+      }
+      .badge.warn {
+        border-color: rgba(255, 176, 94, 0.85);
+        color: var(--warn);
+      }
       .metrics {
         margin-top: 8px;
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 6px;
       }
-
       .metric {
         border: 1px solid #2f4453;
         border-radius: 8px;
         padding: 7px;
         background: rgba(30, 45, 56, 0.28);
       }
-
       .mk {
         font-size: 11px;
         color: var(--muted);
       }
-
       .mv {
         margin-top: 2px;
         font-size: 18px;
         font-family: "Barlow Condensed", sans-serif;
       }
-
+      .rightPane {
+        display: grid;
+        grid-template-rows: minmax(420px, 1fr) 250px;
+        gap: 12px;
+      }
       .mapWrap {
         display: grid;
         grid-template-rows: auto minmax(0, 1fr) auto;
-        min-height: 100%;
       }
-
       .mapHead {
         display: flex;
         justify-content: space-between;
@@ -297,24 +282,59 @@
         border-bottom: 1px solid var(--line);
         background: rgba(11, 18, 24, 0.45);
       }
-
       .mapInfo {
         color: var(--muted);
         font-size: 12px;
       }
-
       #map {
         width: 100%;
-        min-height: 600px;
+        min-height: 460px;
       }
-
       .mapFoot {
         padding: 8px 12px;
         border-top: 1px solid var(--line);
         font-size: 12px;
         color: var(--muted);
       }
-
+      .historyWrap {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+      .historyHead {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .historyMeta {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .historyBody {
+        padding: 10px 12px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        min-height: 0;
+      }
+      .spark {
+        border: 1px solid #2f4453;
+        border-radius: 8px;
+        padding: 8px;
+        background: rgba(21, 32, 40, 0.65);
+      }
+      .sparkTitle {
+        font-size: 11px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .spark svg {
+        width: 100%;
+        height: 120px;
+        display: block;
+      }
       .empty {
         margin: 10px;
         border: 1px dashed #3b5162;
@@ -323,17 +343,22 @@
         color: var(--muted);
         font-size: 13px;
       }
-
-      @media (max-width: 1180px) {
+      @media (max-width: 1260px) {
+        .kpis {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
         .board {
           grid-template-columns: 1fr;
           min-height: auto;
         }
-        .nodeList {
-          max-height: 380px;
+        .rightPane {
+          grid-template-rows: minmax(420px, 1fr) 280px;
         }
-        #map {
-          min-height: 420px;
+        .nodeList {
+          max-height: 420px;
+        }
+        .historyBody {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -343,7 +368,7 @@
       <div class="head">
         <div>
           <h1 class="title">nRF Telemetry Console</h1>
-          <div class="subtitle">MQTT / CoAP unified observability with live node map and GPS point tracking.</div>
+          <div class="subtitle">MQTT / CoAP unified observability with live node map, alarms and historical trends.</div>
         </div>
         <div class="pill">
           <span id="healthDot" class="dot"></span>
@@ -352,22 +377,11 @@
       </div>
 
       <section class="kpis">
-        <article class="kpi">
-          <div class="kpiLabel">Online Nodes</div>
-          <div id="kpiNodes" class="kpiValue">0</div>
-        </article>
-        <article class="kpi">
-          <div class="kpiLabel">GPS Nodes</div>
-          <div id="kpiGps" class="kpiValue">0</div>
-        </article>
-        <article class="kpi">
-          <div class="kpiLabel">Avg Battery</div>
-          <div id="kpiBattery" class="kpiValue">--</div>
-        </article>
-        <article class="kpi">
-          <div class="kpiLabel">Avg Temp</div>
-          <div id="kpiTemp" class="kpiValue">--</div>
-        </article>
+        <article class="kpi"><div class="kpiLabel">Online Nodes</div><div id="kpiNodes" class="kpiValue">0</div></article>
+        <article class="kpi"><div class="kpiLabel">GPS Nodes</div><div id="kpiGps" class="kpiValue">0</div></article>
+        <article class="kpi"><div class="kpiLabel">Alert Nodes</div><div id="kpiAlerts" class="kpiValue">0</div></article>
+        <article class="kpi"><div class="kpiLabel">Avg Battery</div><div id="kpiBattery" class="kpiValue">--</div></article>
+        <article class="kpi"><div class="kpiLabel">Avg Temp</div><div id="kpiTemp" class="kpiValue">--</div></article>
       </section>
 
       <main class="board">
@@ -392,13 +406,36 @@
           <div id="empty" class="empty" style="display:none;">No telemetry yet. Publish MQTT/CoAP data or call POST /api/ingest.</div>
         </section>
 
-        <section class="panel mapWrap">
-          <div class="mapHead">
-            <h2 class="panelTitle" style="font-size:22px;">Live Geo Map</h2>
-            <div id="mapStats" class="mapInfo">0 nodes with coordinates</div>
-          </div>
-          <div id="map"></div>
-          <div class="mapFoot">Click marker for details. Click node card to center map on that node.</div>
+        <section class="rightPane">
+          <section class="panel mapWrap">
+            <div class="mapHead">
+              <h2 class="panelTitle" style="font-size:22px;">Live Geo Map</h2>
+              <div id="mapStats" class="mapInfo">0 nodes with coordinates</div>
+            </div>
+            <div id="map"></div>
+            <div class="mapFoot">Click marker for details. Click node card to center map and load history.</div>
+          </section>
+
+          <section class="panel historyWrap">
+            <div class="historyHead">
+              <h2 class="panelTitle" style="font-size:22px;">History</h2>
+              <div id="historyMeta" class="historyMeta">Select a node to load history</div>
+            </div>
+            <div class="historyBody">
+              <article class="spark">
+                <div class="sparkTitle">Temperature</div>
+                <svg id="tempChart" viewBox="0 0 300 120" preserveAspectRatio="none"></svg>
+              </article>
+              <article class="spark">
+                <div class="sparkTitle">Humidity</div>
+                <svg id="humChart" viewBox="0 0 300 120" preserveAspectRatio="none"></svg>
+              </article>
+              <article class="spark">
+                <div class="sparkTitle">Battery</div>
+                <svg id="batChart" viewBox="0 0 300 120" preserveAspectRatio="none"></svg>
+              </article>
+            </div>
+          </section>
         </section>
       </main>
     </div>
@@ -421,8 +458,13 @@
       const mapStats = document.getElementById("mapStats");
       const kpiNodes = document.getElementById("kpiNodes");
       const kpiGps = document.getElementById("kpiGps");
+      const kpiAlerts = document.getElementById("kpiAlerts");
       const kpiBattery = document.getElementById("kpiBattery");
       const kpiTemp = document.getElementById("kpiTemp");
+      const historyMeta = document.getElementById("historyMeta");
+      const tempChart = document.getElementById("tempChart");
+      const humChart = document.getElementById("humChart");
+      const batChart = document.getElementById("batChart");
 
       let latest = [];
       let timer = null;
@@ -431,6 +473,9 @@
       let markerLayer = null;
       const markerByNodeId = new Map();
       let firstFitDone = false;
+      let selectedNodeId = null;
+      const ALARM_TEMP_C = 40;
+      const ALARM_BATTERY = 20;
 
       function isFiniteCoord(v) {
         return typeof v === "number" && Number.isFinite(v);
@@ -439,12 +484,10 @@
       function initMap() {
         if (!window.L || map) return;
         map = L.map("map", { zoomControl: true }).setView([34.2, 108.9], 4);
-
         L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
           attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
           maxZoom: 19
         }).addTo(map);
-
         markerLayer = L.layerGroup().addTo(map);
       }
 
@@ -467,12 +510,28 @@
         return `${Math.floor(s / 3600)}h ago`;
       }
 
+      function nodeSeverity(item) {
+        const status = String(item.status || "").toLowerCase();
+        const temp = Number(item.temperature);
+        const bat = Number(item.battery);
+        if (status === "alert" || (Number.isFinite(temp) && temp >= ALARM_TEMP_C)) {
+          return "alert";
+        }
+        if (Number.isFinite(bat) && bat <= ALARM_BATTERY) {
+          return "warn";
+        }
+        return "ok";
+      }
+
       function drawKpis(items) {
         const gpsCount = items.filter((x) => isFiniteCoord(x.lat) && isFiniteCoord(x.lng)).length;
         const batt = avg(items, "battery");
         const temp = avg(items, "temperature");
+        const alerts = items.filter((x) => nodeSeverity(x) === "alert").length;
+
         kpiNodes.textContent = String(items.length);
         kpiGps.textContent = String(gpsCount);
+        kpiAlerts.textContent = String(alerts);
         kpiBattery.textContent = batt === null ? "--" : batt.toFixed(0);
         kpiTemp.textContent = temp === null ? "--" : `${temp.toFixed(1)} C`;
       }
@@ -481,7 +540,6 @@
         const filterText = filterInput.value.trim().toLowerCase();
         const sortBy = sortSelect.value;
         const gpsOnly = gpsOnlyInput.checked;
-
         let items = latest.filter((x) => String(x.nodeId).toLowerCase().includes(filterText));
         if (gpsOnly) {
           items = items.filter((x) => isFiniteCoord(x.lat) && isFiniteCoord(x.lng));
@@ -504,30 +562,37 @@
         empty.style.display = "none";
 
         for (const item of items) {
+          const sev = nodeSeverity(item);
           const card = document.createElement("article");
-          card.className = "nodeCard";
+          card.className = `nodeCard${selectedNodeId === item.nodeId ? " selected" : ""}${sev === "alert" ? " alert" : sev === "warn" ? " warn" : ""}`;
+          const badgeClass = sev === "alert" ? "badge alert" : sev === "warn" ? "badge warn" : "badge";
+          const badgeText = sev === "alert" ? "ALERT" : sev === "warn" ? "LOW BAT" : "NORMAL";
           card.innerHTML = `
             <div class="nodeTop">
               <div class="nodeId">${item.nodeId}</div>
-              <div class="time">${timeAgo(item.updatedAt)}</div>
+              <div class="${badgeClass}">${badgeText}</div>
             </div>
+            <div class="time">${timeAgo(item.updatedAt)}</div>
             <div class="metrics">
               <div class="metric"><div class="mk">Temp</div><div class="mv">${fmt(item.temperature, " C")}</div></div>
               <div class="metric"><div class="mk">Humidity</div><div class="mv">${fmt(item.humidity, " %")}</div></div>
               <div class="metric"><div class="mk">Battery</div><div class="mv">${fmt(item.battery)}</div></div>
-              <div class="metric"><div class="mk">RSSI</div><div class="mv">${fmt(item.rssi, " dBm")}</div></div>
+              <div class="metric"><div class="mk">Status</div><div class="mv">${fmt(item.status)}</div></div>
               <div class="metric"><div class="mk">Latitude</div><div class="mv">${fmt(item.lat)}</div></div>
               <div class="metric"><div class="mk">Longitude</div><div class="mv">${fmt(item.lng)}</div></div>
             </div>
           `;
 
           card.addEventListener("click", () => {
+            selectedNodeId = item.nodeId;
             const marker = markerByNodeId.get(item.nodeId);
-            if (!map || !marker) return;
-            map.setView(marker.getLatLng(), Math.max(11, map.getZoom()), { animate: true });
-            marker.openPopup();
+            if (map && marker) {
+              map.setView(marker.getLatLng(), Math.max(11, map.getZoom()), { animate: true });
+              marker.openPopup();
+            }
+            loadHistory(item.nodeId);
+            draw();
           });
-
           grid.appendChild(card);
         }
 
@@ -537,7 +602,6 @@
       function drawMap(items) {
         initMap();
         if (!map || !markerLayer) return;
-
         markerLayer.clearLayers();
         markerByNodeId.clear();
 
@@ -547,24 +611,95 @@
 
         const bounds = [];
         for (const item of gpsItems) {
+          const sev = nodeSeverity(item);
+          const color = sev === "alert" ? "#ff7e83" : sev === "warn" ? "#ffb05e" : "#46d7d9";
           const marker = L.circleMarker([item.lat, item.lng], {
             radius: 7,
             color: "#0b0f12",
             weight: 1,
-            fillColor: "#46d7d9",
+            fillColor: color,
             fillOpacity: 0.9
           });
           marker.bindPopup(
-            `<strong>${item.nodeId}</strong><br/>Lat: ${item.lat}<br/>Lng: ${item.lng}<br/>Temp: ${fmt(item.temperature)}<br/>Battery: ${fmt(item.battery)}`
+            `<strong>${item.nodeId}</strong><br/>Status: ${fmt(item.status)}<br/>Temp: ${fmt(item.temperature)}<br/>Battery: ${fmt(item.battery)}`
           );
           marker.addTo(markerLayer);
+          marker.on("click", () => {
+            selectedNodeId = item.nodeId;
+            loadHistory(item.nodeId);
+            draw();
+          });
           markerByNodeId.set(item.nodeId, marker);
           bounds.push([item.lat, item.lng]);
         }
-
         if (!firstFitDone) {
           map.fitBounds(bounds, { padding: [20, 20] });
           firstFitDone = true;
+        }
+      }
+
+      function drawSpark(svgEl, values, color) {
+        const width = 300;
+        const height = 120;
+        svgEl.innerHTML = "";
+        if (!values.length) {
+          const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          text.setAttribute("x", "12");
+          text.setAttribute("y", "64");
+          text.setAttribute("fill", "#8ea4b7");
+          text.setAttribute("font-size", "12");
+          text.textContent = "No history data";
+          svgEl.appendChild(text);
+          return;
+        }
+        const nums = values.filter((n) => Number.isFinite(n));
+        if (!nums.length) return;
+        const min = Math.min(...nums);
+        const max = Math.max(...nums);
+        const span = max - min || 1;
+        const stepX = values.length > 1 ? width / (values.length - 1) : width;
+
+        let path = "";
+        for (let i = 0; i < values.length; i += 1) {
+          const v = Number(values[i]);
+          if (!Number.isFinite(v)) continue;
+          const x = i * stepX;
+          const y = height - ((v - min) / span) * (height - 10) - 5;
+          path += `${path ? " L" : "M"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+        }
+
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        line.setAttribute("d", path);
+        line.setAttribute("fill", "none");
+        line.setAttribute("stroke", color);
+        line.setAttribute("stroke-width", "2.5");
+        line.setAttribute("stroke-linecap", "round");
+        line.setAttribute("stroke-linejoin", "round");
+        svgEl.appendChild(line);
+      }
+
+      async function loadHistory(nodeId) {
+        historyMeta.textContent = `Loading history for ${nodeId}...`;
+        try {
+          const resp = await fetch(`/api/nodes/${encodeURIComponent(nodeId)}/history?limit=100`);
+          if (!resp.ok) throw new Error(`status_${resp.status}`);
+          const data = await resp.json();
+          const items = (data.items || []).slice().reverse();
+
+          const temps = items.map((x) => Number(x.temperature));
+          const hums = items.map((x) => Number(x.humidity));
+          const bats = items.map((x) => Number(x.battery));
+
+          drawSpark(tempChart, temps, "#46d7d9");
+          drawSpark(humChart, hums, "#63ff9f");
+          drawSpark(batChart, bats, "#ffb05e");
+
+          historyMeta.textContent = `${nodeId} • ${items.length} points • source: ${data.source}`;
+        } catch (err) {
+          drawSpark(tempChart, [], "#46d7d9");
+          drawSpark(humChart, [], "#63ff9f");
+          drawSpark(batChart, [], "#ffb05e");
+          historyMeta.textContent = `${nodeId} • history unavailable (${err.message})`;
         }
       }
 
@@ -573,6 +708,10 @@
           const resp = await fetch("/api/nodes");
           const data = await resp.json();
           latest = data.items || [];
+          if (!selectedNodeId && latest.length) {
+            selectedNodeId = latest[0].nodeId;
+            loadHistory(selectedNodeId);
+          }
           draw();
         } catch {
           latest = [];
@@ -597,9 +736,7 @@
         autoBtn.textContent = `Auto: ${on ? "ON" : "OFF"}`;
         autoBtn.className = on ? "" : "secondary";
         if (timer) clearInterval(timer);
-        if (on) {
-          timer = setInterval(refresh, 3000);
-        }
+        if (on) timer = setInterval(refresh, 3000);
       }
 
       refreshBtn.addEventListener("click", refresh);
