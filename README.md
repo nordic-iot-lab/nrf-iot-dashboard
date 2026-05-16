@@ -83,6 +83,26 @@ Open:
 http://localhost:8080
 ```
 
+## Run with Docker
+
+Use your existing `.env` (or copy from `.env.example`) and run:
+
+```bash
+docker compose up -d --build
+```
+
+Check logs:
+
+```bash
+docker compose logs -f
+```
+
+Stop:
+
+```bash
+docker compose down
+```
+
 If you want this app to pull from your server:
 
 ```env
