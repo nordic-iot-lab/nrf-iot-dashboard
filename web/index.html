@@ -3,7 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>nRF Node Dashboard</title>
+    <title>nRF Telemetry Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -12,86 +18,276 @@
     />
     <style>
       :root {
-        --bg: #f5f7fb;
-        --surface: #ffffff;
-        --text: #10213a;
-        --muted: #5f6f84;
-        --line: #dce3ef;
-        --primary: #1f7ae0;
-        --ok: #228b5f;
-        --warn: #d08421;
+        --bg: #0d1318;
+        --bg-soft: #121a21;
+        --surface: #1b252f;
+        --surface-2: #22313d;
+        --text: #dbe9f5;
+        --muted: #8ea4b7;
+        --line: #324654;
+        --accent: #46d7d9;
+        --accent-2: #63ff9f;
+        --warn: #ffb05e;
+        --danger: #ff7e83;
+        --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
       }
-      * { box-sizing: border-box; }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
-        font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
-        background: radial-gradient(circle at top right, #e9f3ff 0%, var(--bg) 42%, #f9fbff 100%);
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(1200px 500px at 80% -10%, rgba(70, 215, 217, 0.12), transparent 50%),
+          radial-gradient(900px 350px at 12% 110%, rgba(99, 255, 159, 0.12), transparent 50%),
+          var(--bg);
         color: var(--text);
       }
-      .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 18px 40px; }
-      .top {
+
+      .shell {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 18px 18px 26px;
+      }
+
+      .head {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        gap: 10px;
+        align-items: end;
+        gap: 12px;
         flex-wrap: wrap;
       }
-      h1 { margin: 0; font-size: 30px; letter-spacing: 0; }
-      .sub { margin-top: 6px; color: var(--muted); font-size: 14px; }
-      .toolbar {
-        margin-top: 20px;
-        background: var(--surface);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 12px;
-        display: grid;
-        grid-template-columns: 1fr 1fr auto auto auto;
-        gap: 10px;
+
+      .title {
+        margin: 0;
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 46px;
+        line-height: 0.95;
+        letter-spacing: 0;
       }
-      input, select, button {
-        height: 40px;
-        border-radius: 8px;
-        border: 1px solid var(--line);
-        padding: 0 12px;
+
+      .subtitle {
+        margin-top: 8px;
+        color: var(--muted);
         font-size: 14px;
-        color: var(--text);
-        background: #fff;
       }
-      button {
-        cursor: pointer;
-        background: var(--primary);
-        color: #fff;
-        border-color: var(--primary);
-        font-weight: 600;
-      }
-      button.secondary {
-        background: #fff;
-        color: var(--text);
-        border-color: var(--line);
-      }
-      .gpsOnlyLabel {
+
+      .pill {
         display: inline-flex;
         align-items: center;
         gap: 8px;
+        padding: 9px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(24, 35, 44, 0.8);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--warn);
+        box-shadow: 0 0 0 0 rgba(255, 176, 94, 0.6);
+        animation: pulse 1.8s infinite;
+      }
+
+      .dot.ok {
+        background: var(--accent-2);
+        box-shadow: 0 0 0 0 rgba(99, 255, 159, 0.65);
+      }
+
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 currentColor; }
+        70% { box-shadow: 0 0 0 8px rgba(0, 0, 0, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+      }
+
+      .kpis {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .kpi {
+        background: linear-gradient(170deg, rgba(40, 59, 73, 0.8), rgba(24, 36, 45, 0.9));
         border: 1px solid var(--line);
         border-radius: 8px;
-        padding: 0 10px;
-        font-size: 14px;
-        background: #fff;
-        height: 40px;
+        padding: 10px 12px;
+        box-shadow: var(--shadow);
       }
-      .gpsOnlyLabel input {
+
+      .kpiLabel {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+      }
+
+      .kpiValue {
+        margin-top: 4px;
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 34px;
+        line-height: 0.95;
+      }
+
+      .board {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: 420px minmax(0, 1fr);
+        gap: 12px;
+        min-height: calc(100vh - 210px);
+      }
+
+      .panel {
+        background: linear-gradient(160deg, rgba(29, 42, 53, 0.86), rgba(20, 30, 38, 0.94));
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .panelHead {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(11, 18, 24, 0.5);
+      }
+
+      .panelTitle {
+        margin: 0;
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 24px;
+        line-height: 1;
+      }
+
+      .tools {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 10px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      input,
+      select,
+      button {
+        height: 38px;
+        border-radius: 8px;
+        border: 1px solid #3a4f5f;
+        background: #111b23;
+        color: var(--text);
+        font-family: "IBM Plex Sans", sans-serif;
+        font-size: 13px;
+        padding: 0 10px;
+      }
+
+      button {
+        background: linear-gradient(160deg, #2b5068, #21455a);
+        border-color: #4b7d99;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      button.secondary {
+        background: #111b23;
+      }
+
+      .toggles {
+        grid-column: span 2;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .check {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .check input {
         width: 16px;
         height: 16px;
         margin: 0;
       }
-      .mapBand {
-        margin-top: 14px;
-        background: var(--surface);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        overflow: hidden;
+
+      .nodeList {
+        padding: 10px;
+        max-height: calc(100vh - 390px);
+        overflow: auto;
+        display: grid;
+        gap: 8px;
       }
+
+      .nodeCard {
+        border: 1px solid #395061;
+        border-radius: 8px;
+        background: rgba(14, 24, 31, 0.82);
+        padding: 10px;
+        cursor: pointer;
+        transition: transform 120ms ease, border-color 120ms ease;
+      }
+
+      .nodeCard:hover {
+        transform: translateY(-1px);
+        border-color: var(--accent);
+      }
+
+      .nodeTop {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: baseline;
+      }
+
+      .nodeId {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 26px;
+        line-height: 1;
+      }
+
+      .time {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .metrics {
+        margin-top: 8px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .metric {
+        border: 1px solid #2f4453;
+        border-radius: 8px;
+        padding: 7px;
+        background: rgba(30, 45, 56, 0.28);
+      }
+
+      .mk {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .mv {
+        margin-top: 2px;
+        font-size: 18px;
+        font-family: "Barlow Condensed", sans-serif;
+      }
+
+      .mapWrap {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        min-height: 100%;
+      }
+
       .mapHead {
         display: flex;
         justify-content: space-between;
@@ -99,113 +295,112 @@
         gap: 8px;
         padding: 10px 12px;
         border-bottom: 1px solid var(--line);
+        background: rgba(11, 18, 24, 0.45);
       }
-      .mapTitle {
-        font-weight: 700;
-      }
-      .mapSub {
-        font-size: 12px;
+
+      .mapInfo {
         color: var(--muted);
+        font-size: 12px;
       }
+
       #map {
         width: 100%;
-        height: 400px;
+        min-height: 600px;
       }
-      .mapNote {
-        padding: 10px 12px;
+
+      .mapFoot {
+        padding: 8px 12px;
         border-top: 1px solid var(--line);
-        color: var(--muted);
         font-size: 12px;
-      }
-      .grid {
-        margin-top: 16px;
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 12px;
-      }
-      .card {
-        background: var(--surface);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 14px;
-      }
-      .cardTop {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 8px;
-      }
-      .nodeId {
-        font-weight: 700;
-        font-size: 18px;
-      }
-      .time { color: var(--muted); font-size: 12px; }
-      .kv {
-        margin-top: 10px;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
-      .item {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 8px;
-        background: #fbfdff;
-      }
-      .k { font-size: 12px; color: var(--muted); }
-      .v { margin-top: 3px; font-size: 18px; font-weight: 700; }
-      .status { font-size: 12px; font-weight: 600; }
-      .ok { color: var(--ok); }
-      .warn { color: var(--warn); }
-      .clickable { cursor: pointer; }
-      .clickable:hover { border-color: #b8c9e3; }
-      .empty {
-        margin-top: 12px;
-        padding: 16px;
-        border: 1px dashed var(--line);
-        border-radius: 8px;
         color: var(--muted);
-        background: #fff;
       }
-      @media (max-width: 800px) {
-        .toolbar { grid-template-columns: 1fr 1fr; }
-        #map { height: 320px; }
+
+      .empty {
+        margin: 10px;
+        border: 1px dashed #3b5162;
+        border-radius: 8px;
+        padding: 12px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 1180px) {
+        .board {
+          grid-template-columns: 1fr;
+          min-height: auto;
+        }
+        .nodeList {
+          max-height: 380px;
+        }
+        #map {
+          min-height: 420px;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="wrap">
-      <div class="top">
+    <div class="shell">
+      <div class="head">
         <div>
-          <h1>nRF Node Dashboard</h1>
-          <div class="sub">CoAP/MQTT uplink data fetched from your server, grouped by node.</div>
+          <h1 class="title">nRF Telemetry Console</h1>
+          <div class="subtitle">MQTT / CoAP unified observability with live node map and GPS point tracking.</div>
         </div>
-        <div id="health" class="status warn">service: checking...</div>
+        <div class="pill">
+          <span id="healthDot" class="dot"></span>
+          <span id="healthText">service checking...</span>
+        </div>
       </div>
 
-      <div class="toolbar">
-        <input id="filterInput" placeholder="Filter by node id, ex: nrf-001" />
-        <select id="sortSelect">
-          <option value="updatedAt">Sort: latest update</option>
-          <option value="temperature">Sort: temperature</option>
-          <option value="battery">Sort: battery</option>
-        </select>
-        <label class="gpsOnlyLabel"><input id="gpsOnly" type="checkbox" /> GPS only</label>
-        <button id="refreshBtn">Refresh</button>
-        <button id="autoBtn" class="secondary">Auto: ON</button>
-      </div>
-
-      <section class="mapBand">
-        <div class="mapHead">
-          <div class="mapTitle">Live GPS Map</div>
-          <div id="mapStats" class="mapSub">0 nodes with GPS</div>
-        </div>
-        <div id="map"></div>
-        <div class="mapNote">Click a marker to view node metrics. Click a node card to focus map.</div>
+      <section class="kpis">
+        <article class="kpi">
+          <div class="kpiLabel">Online Nodes</div>
+          <div id="kpiNodes" class="kpiValue">0</div>
+        </article>
+        <article class="kpi">
+          <div class="kpiLabel">GPS Nodes</div>
+          <div id="kpiGps" class="kpiValue">0</div>
+        </article>
+        <article class="kpi">
+          <div class="kpiLabel">Avg Battery</div>
+          <div id="kpiBattery" class="kpiValue">--</div>
+        </article>
+        <article class="kpi">
+          <div class="kpiLabel">Avg Temp</div>
+          <div id="kpiTemp" class="kpiValue">--</div>
+        </article>
       </section>
 
-      <div id="grid" class="grid"></div>
-      <div id="empty" class="empty" style="display:none;">No node data yet. Publish MQTT data or call POST /api/ingest.</div>
+      <main class="board">
+        <section class="panel">
+          <header class="panelHead">
+            <h2 class="panelTitle">Node Grid</h2>
+          </header>
+          <div class="tools">
+            <input id="filterInput" placeholder="Filter by node id" />
+            <select id="sortSelect">
+              <option value="updatedAt">Sort: latest update</option>
+              <option value="temperature">Sort: temperature</option>
+              <option value="battery">Sort: battery</option>
+            </select>
+            <button id="refreshBtn">Refresh</button>
+            <button id="autoBtn" class="secondary">Auto: ON</button>
+            <div class="toggles">
+              <label class="check"><input id="gpsOnly" type="checkbox" /> GPS only</label>
+            </div>
+          </div>
+          <div id="grid" class="nodeList"></div>
+          <div id="empty" class="empty" style="display:none;">No telemetry yet. Publish MQTT/CoAP data or call POST /api/ingest.</div>
+        </section>
+
+        <section class="panel mapWrap">
+          <div class="mapHead">
+            <h2 class="panelTitle" style="font-size:22px;">Live Geo Map</h2>
+            <div id="mapStats" class="mapInfo">0 nodes with coordinates</div>
+          </div>
+          <div id="map"></div>
+          <div class="mapFoot">Click marker for details. Click node card to center map on that node.</div>
+        </section>
+      </main>
     </div>
 
     <script
@@ -221,17 +416,21 @@
       const gpsOnlyInput = document.getElementById("gpsOnly");
       const refreshBtn = document.getElementById("refreshBtn");
       const autoBtn = document.getElementById("autoBtn");
-      const health = document.getElementById("health");
+      const healthDot = document.getElementById("healthDot");
+      const healthText = document.getElementById("healthText");
       const mapStats = document.getElementById("mapStats");
+      const kpiNodes = document.getElementById("kpiNodes");
+      const kpiGps = document.getElementById("kpiGps");
+      const kpiBattery = document.getElementById("kpiBattery");
+      const kpiTemp = document.getElementById("kpiTemp");
 
       let latest = [];
       let timer = null;
       let autoMode = true;
       let map = null;
-      let tileLayer = null;
       let markerLayer = null;
-      let firstFitDone = false;
       const markerByNodeId = new Map();
+      let firstFitDone = false;
 
       function isFiniteCoord(v) {
         return typeof v === "number" && Number.isFinite(v);
@@ -239,13 +438,11 @@
 
       function initMap() {
         if (!window.L || map) return;
-        map = L.map("map", {
-          zoomControl: true
-        }).setView([39.9042, 116.4074], 4);
+        map = L.map("map", { zoomControl: true }).setView([34.2, 108.9], 4);
 
-        tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19,
-          attribution: "&copy; OpenStreetMap contributors"
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+          attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+          maxZoom: 19
         }).addTo(map);
 
         markerLayer = L.layerGroup().addTo(map);
@@ -256,6 +453,12 @@
         return `${value}${unit}`;
       };
 
+      function avg(items, key) {
+        const vals = items.map((x) => Number(x[key])).filter((n) => Number.isFinite(n));
+        if (!vals.length) return null;
+        return vals.reduce((a, b) => a + b, 0) / vals.length;
+      }
+
       function timeAgo(ts) {
         if (!ts) return "--";
         const s = Math.floor((Date.now() - ts) / 1000);
@@ -264,12 +467,22 @@
         return `${Math.floor(s / 3600)}h ago`;
       }
 
+      function drawKpis(items) {
+        const gpsCount = items.filter((x) => isFiniteCoord(x.lat) && isFiniteCoord(x.lng)).length;
+        const batt = avg(items, "battery");
+        const temp = avg(items, "temperature");
+        kpiNodes.textContent = String(items.length);
+        kpiGps.textContent = String(gpsCount);
+        kpiBattery.textContent = batt === null ? "--" : batt.toFixed(0);
+        kpiTemp.textContent = temp === null ? "--" : `${temp.toFixed(1)} C`;
+      }
+
       function draw() {
         const filterText = filterInput.value.trim().toLowerCase();
         const sortBy = sortSelect.value;
         const gpsOnly = gpsOnlyInput.checked;
 
-        let items = latest.filter((x) => x.nodeId.toLowerCase().includes(filterText));
+        let items = latest.filter((x) => String(x.nodeId).toLowerCase().includes(filterText));
         if (gpsOnly) {
           items = items.filter((x) => isFiniteCoord(x.lat) && isFiniteCoord(x.lng));
         }
@@ -281,40 +494,40 @@
           return bv - av;
         });
 
+        drawKpis(items);
         grid.innerHTML = "";
         if (!items.length) {
           empty.style.display = "";
+          drawMap(items);
           return;
         }
         empty.style.display = "none";
 
         for (const item of items) {
           const card = document.createElement("article");
-          card.className = "card clickable";
-          card.dataset.nodeId = item.nodeId;
+          card.className = "nodeCard";
           card.innerHTML = `
-            <div class="cardTop">
+            <div class="nodeTop">
               <div class="nodeId">${item.nodeId}</div>
               <div class="time">${timeAgo(item.updatedAt)}</div>
             </div>
-            <div class="kv">
-              <div class="item"><div class="k">Temperature</div><div class="v">${fmt(item.temperature, " C")}</div></div>
-              <div class="item"><div class="k">Humidity</div><div class="v">${fmt(item.humidity, " %")}</div></div>
-              <div class="item"><div class="k">Battery</div><div class="v">${fmt(item.battery)}</div></div>
-              <div class="item"><div class="k">RSSI</div><div class="v">${fmt(item.rssi, " dBm")}</div></div>
-              <div class="item"><div class="k">Voltage</div><div class="v">${fmt(item.voltage, " V")}</div></div>
-              <div class="item"><div class="k">CO2</div><div class="v">${fmt(item.co2, " ppm")}</div></div>
-              <div class="item"><div class="k">Latitude</div><div class="v">${fmt(item.lat)}</div></div>
-              <div class="item"><div class="k">Longitude</div><div class="v">${fmt(item.lng)}</div></div>
+            <div class="metrics">
+              <div class="metric"><div class="mk">Temp</div><div class="mv">${fmt(item.temperature, " C")}</div></div>
+              <div class="metric"><div class="mk">Humidity</div><div class="mv">${fmt(item.humidity, " %")}</div></div>
+              <div class="metric"><div class="mk">Battery</div><div class="mv">${fmt(item.battery)}</div></div>
+              <div class="metric"><div class="mk">RSSI</div><div class="mv">${fmt(item.rssi, " dBm")}</div></div>
+              <div class="metric"><div class="mk">Latitude</div><div class="mv">${fmt(item.lat)}</div></div>
+              <div class="metric"><div class="mk">Longitude</div><div class="mv">${fmt(item.lng)}</div></div>
             </div>
           `;
 
           card.addEventListener("click", () => {
             const marker = markerByNodeId.get(item.nodeId);
             if (!map || !marker) return;
-            map.setView(marker.getLatLng(), Math.max(map.getZoom(), 13), { animate: true });
+            map.setView(marker.getLatLng(), Math.max(11, map.getZoom()), { animate: true });
             marker.openPopup();
           });
+
           grid.appendChild(card);
         }
 
@@ -329,11 +542,18 @@
         markerByNodeId.clear();
 
         const gpsItems = items.filter((x) => isFiniteCoord(x.lat) && isFiniteCoord(x.lng));
-        mapStats.textContent = `${gpsItems.length} node${gpsItems.length === 1 ? "" : "s"} with GPS`;
+        mapStats.textContent = `${gpsItems.length} node${gpsItems.length === 1 ? "" : "s"} with coordinates`;
+        if (!gpsItems.length) return;
 
         const bounds = [];
         for (const item of gpsItems) {
-          const marker = L.marker([item.lat, item.lng]);
+          const marker = L.circleMarker([item.lat, item.lng], {
+            radius: 7,
+            color: "#0b0f12",
+            weight: 1,
+            fillColor: "#46d7d9",
+            fillOpacity: 0.9
+          });
           marker.bindPopup(
             `<strong>${item.nodeId}</strong><br/>Lat: ${item.lat}<br/>Lng: ${item.lng}<br/>Temp: ${fmt(item.temperature)}<br/>Battery: ${fmt(item.battery)}`
           );
@@ -342,29 +562,33 @@
           bounds.push([item.lat, item.lng]);
         }
 
-        if (!bounds.length) return;
         if (!firstFitDone) {
-          map.fitBounds(bounds, { padding: [28, 28] });
+          map.fitBounds(bounds, { padding: [20, 20] });
           firstFitDone = true;
         }
       }
 
       async function refresh() {
-        const resp = await fetch("/api/nodes");
-        const data = await resp.json();
-        latest = data.items || [];
-        draw();
+        try {
+          const resp = await fetch("/api/nodes");
+          const data = await resp.json();
+          latest = data.items || [];
+          draw();
+        } catch {
+          latest = [];
+          draw();
+        }
       }
 
       async function checkHealth() {
         try {
           const resp = await fetch("/api/health");
           if (!resp.ok) throw new Error("bad_status");
-          health.textContent = "service: online";
-          health.className = "status ok";
+          healthDot.classList.add("ok");
+          healthText.textContent = "service online";
         } catch {
-          health.textContent = "service: offline";
-          health.className = "status warn";
+          healthDot.classList.remove("ok");
+          healthText.textContent = "service offline";
         }
       }
 
