@@ -41,3 +41,12 @@ test("istag-like payload fields should normalize correctly", () => {
   assert.equal(row.tiltDeg, 2);
 });
 
+test("unchanged payload should not bump updatedAt but should bump lastSeenAt", async () => {
+  resetStore();
+  const first = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 30.1 }, "a1b2");
+  await new Promise((r) => setTimeout(r, 4));
+  const second = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 30.1 }, "a1b2");
+
+  assert.equal(second.updatedAt, first.updatedAt);
+  assert.ok(second.lastSeenAt >= first.lastSeenAt);
+});

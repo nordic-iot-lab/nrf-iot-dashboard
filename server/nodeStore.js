@@ -1,5 +1,24 @@
 const nodeMap = new Map();
 
+function stableNormalize(value) {
+  if (Array.isArray(value)) {
+    return value.map(stableNormalize);
+  }
+  if (value && typeof value === "object") {
+    const keys = Object.keys(value).sort();
+    const out = {};
+    for (const key of keys) {
+      out[key] = stableNormalize(value[key]);
+    }
+    return out;
+  }
+  return value;
+}
+
+function stableStringify(value) {
+  return JSON.stringify(stableNormalize(value));
+}
+
 function normalizeStringId(value) {
   if (value === null || value === undefined) return "";
   return String(value).trim().toLowerCase();
@@ -107,8 +126,6 @@ function resolveNodeId(payload, fallbackNodeId) {
 function normalizePayload(payload, fallbackNodeId) {
   const nodeId = resolveNodeId(payload, fallbackNodeId);
   const { lat, lng } = extractCoordinates(payload);
-
-  const now = Date.now();
   return {
     nodeId,
     temperature: payload.temperature ?? payload.temp ?? payload.temp_c ?? payload.tempC ?? null,
@@ -125,14 +142,14 @@ function normalizePayload(payload, fallbackNodeId) {
     tiltDeg: payload.tilt_deg ?? payload.tiltDeg ?? null,
     lat,
     lng,
-    raw: payload,
-    updatedAt: now
+    raw: payload
   };
 }
 
 function upsertNodeTelemetry(payload, fallbackNodeId) {
   const normalized = normalizePayload(payload, fallbackNodeId);
   const prev = nodeMap.get(normalized.nodeId) || {};
+  const now = Date.now();
   const merged = {
     ...prev,
     ...normalized
@@ -145,6 +162,11 @@ function upsertNodeTelemetry(payload, fallbackNodeId) {
   if (normalized.lng === null && prev.lng !== undefined) {
     merged.lng = prev.lng;
   }
+
+  const prevRaw = prev.raw || null;
+  const changed = stableStringify(prevRaw) !== stableStringify(normalized.raw || null);
+  merged.lastSeenAt = now;
+  merged.updatedAt = changed ? now : prev.updatedAt || now;
 
   nodeMap.set(normalized.nodeId, merged);
   return nodeMap.get(normalized.nodeId);
