@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>nRF Node Dashboard</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --surface: #ffffff;
+        --text: #10213a;
+        --muted: #5f6f84;
+        --line: #dce3ef;
+        --primary: #1f7ae0;
+        --ok: #228b5f;
+        --warn: #d08421;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+        background: radial-gradient(circle at top right, #e9f3ff 0%, var(--bg) 42%, #f9fbff 100%);
+        color: var(--text);
+      }
+      .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 18px 40px; }
+      .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      h1 { margin: 0; font-size: 30px; letter-spacing: 0; }
+      .sub { margin-top: 6px; color: var(--muted); font-size: 14px; }
+      .toolbar {
+        margin-top: 20px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        display: grid;
+        grid-template-columns: 1fr 1fr auto auto;
+        gap: 10px;
+      }
+      input, select, button {
+        height: 40px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        padding: 0 12px;
+        font-size: 14px;
+        color: var(--text);
+        background: #fff;
+      }
+      button {
+        cursor: pointer;
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+        font-weight: 600;
+      }
+      button.secondary {
+        background: #fff;
+        color: var(--text);
+        border-color: var(--line);
+      }
+      .grid {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+      }
+      .cardTop {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .nodeId {
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .time { color: var(--muted); font-size: 12px; }
+      .kv {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .item {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px;
+        background: #fbfdff;
+      }
+      .k { font-size: 12px; color: var(--muted); }
+      .v { margin-top: 3px; font-size: 18px; font-weight: 700; }
+      .status { font-size: 12px; font-weight: 600; }
+      .ok { color: var(--ok); }
+      .warn { color: var(--warn); }
+      .empty {
+        margin-top: 12px;
+        padding: 16px;
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+        color: var(--muted);
+        background: #fff;
+      }
+      @media (max-width: 800px) {
+        .toolbar { grid-template-columns: 1fr 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="top">
+        <div>
+          <h1>nRF Node Dashboard</h1>
+          <div class="sub">CoAP/MQTT uplink data fetched from your server, grouped by node.</div>
+        </div>
+        <div id="health" class="status warn">service: checking...</div>
+      </div>
+
+      <div class="toolbar">
+        <input id="filterInput" placeholder="Filter by node id, ex: nrf-001" />
+        <select id="sortSelect">
+          <option value="updatedAt">Sort: latest update</option>
+          <option value="temperature">Sort: temperature</option>
+          <option value="battery">Sort: battery</option>
+        </select>
+        <button id="refreshBtn">Refresh</button>
+        <button id="autoBtn" class="secondary">Auto: ON</button>
+      </div>
+
+      <div id="grid" class="grid"></div>
+      <div id="empty" class="empty" style="display:none;">No node data yet. Publish MQTT data or call POST /api/ingest.</div>
+    </div>
+
+    <script>
+      const grid = document.getElementById("grid");
+      const empty = document.getElementById("empty");
+      const filterInput = document.getElementById("filterInput");
+      const sortSelect = document.getElementById("sortSelect");
+      const refreshBtn = document.getElementById("refreshBtn");
+      const autoBtn = document.getElementById("autoBtn");
+      const health = document.getElementById("health");
+
+      let latest = [];
+      let timer = null;
+      let autoMode = true;
+
+      const fmt = (value, unit = "") => {
+        if (value === null || value === undefined || value === "") return "--";
+        return `${value}${unit}`;
+      };
+
+      function timeAgo(ts) {
+        if (!ts) return "--";
+        const s = Math.floor((Date.now() - ts) / 1000);
+        if (s < 60) return `${s}s ago`;
+        if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+        return `${Math.floor(s / 3600)}h ago`;
+      }
+
+      function draw() {
+        const filterText = filterInput.value.trim().toLowerCase();
+        const sortBy = sortSelect.value;
+
+        let items = latest.filter((x) => x.nodeId.toLowerCase().includes(filterText));
+
+        items.sort((a, b) => {
+          if (sortBy === "updatedAt") return (b.updatedAt || 0) - (a.updatedAt || 0);
+          const av = Number(a[sortBy] ?? -999999);
+          const bv = Number(b[sortBy] ?? -999999);
+          return bv - av;
+        });
+
+        grid.innerHTML = "";
+        if (!items.length) {
+          empty.style.display = "";
+          return;
+        }
+        empty.style.display = "none";
+
+        for (const item of items) {
+          const card = document.createElement("article");
+          card.className = "card";
+          card.innerHTML = `
+            <div class="cardTop">
+              <div class="nodeId">${item.nodeId}</div>
+              <div class="time">${timeAgo(item.updatedAt)}</div>
+            </div>
+            <div class="kv">
+              <div class="item"><div class="k">Temperature</div><div class="v">${fmt(item.temperature, " C")}</div></div>
+              <div class="item"><div class="k">Humidity</div><div class="v">${fmt(item.humidity, " %")}</div></div>
+              <div class="item"><div class="k">Battery</div><div class="v">${fmt(item.battery)}</div></div>
+              <div class="item"><div class="k">RSSI</div><div class="v">${fmt(item.rssi, " dBm")}</div></div>
+              <div class="item"><div class="k">Voltage</div><div class="v">${fmt(item.voltage, " V")}</div></div>
+              <div class="item"><div class="k">CO2</div><div class="v">${fmt(item.co2, " ppm")}</div></div>
+            </div>
+          `;
+          grid.appendChild(card);
+        }
+      }
+
+      async function refresh() {
+        const resp = await fetch("/api/nodes");
+        const data = await resp.json();
+        latest = data.items || [];
+        draw();
+      }
+
+      async function checkHealth() {
+        try {
+          const resp = await fetch("/api/health");
+          if (!resp.ok) throw new Error("bad_status");
+          health.textContent = "service: online";
+          health.className = "status ok";
+        } catch {
+          health.textContent = "service: offline";
+          health.className = "status warn";
+        }
+      }
+
+      function setAutoMode(on) {
+        autoMode = on;
+        autoBtn.textContent = `Auto: ${on ? "ON" : "OFF"}`;
+        autoBtn.className = on ? "" : "secondary";
+        if (timer) clearInterval(timer);
+        if (on) {
+          timer = setInterval(refresh, 3000);
+        }
+      }
+
+      refreshBtn.addEventListener("click", refresh);
+      filterInput.addEventListener("input", draw);
+      sortSelect.addEventListener("change", draw);
+      autoBtn.addEventListener("click", () => setAutoMode(!autoMode));
+
+      setAutoMode(true);
+      checkHealth();
+      refresh();
+    </script>
+  </body>
+</html>

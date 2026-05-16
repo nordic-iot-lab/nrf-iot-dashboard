@@ -1,0 +1,64 @@
+const path = require("path");
+const express = require("express");
+const dotenv = require("dotenv");
+const { startMqttIngest } = require("./mqttClient");
+const { upsertNodeTelemetry, getAllNodes, getNode } = require("./nodeStore");
+const { startUpstreamPuller, pullOnce } = require("./upstreamPuller");
+
+dotenv.config();
+
+const app = express();
+app.use(express.json({ limit: "1mb" }));
+app.use(express.static(path.join(__dirname, "..", "web")));
+
+const config = {
+  PORT: Number(process.env.PORT || 8080),
+  MQTT_BROKER_URL: process.env.MQTT_BROKER_URL || "mqtt://localhost:1883",
+  MQTT_TOPIC: process.env.MQTT_TOPIC || "nrf/+/telemetry",
+  MQTT_USERNAME: process.env.MQTT_USERNAME || "",
+  MQTT_PASSWORD: process.env.MQTT_PASSWORD || "",
+  MQTT_CLIENT_ID: process.env.MQTT_CLIENT_ID || `nordic-web-dashboard-${Date.now()}`,
+  UPSTREAM_PULL_URL: process.env.UPSTREAM_PULL_URL || "",
+  UPSTREAM_PULL_INTERVAL_MS: Number(process.env.UPSTREAM_PULL_INTERVAL_MS || 8000),
+  UPSTREAM_AUTH_TOKEN: process.env.UPSTREAM_AUTH_TOKEN || ""
+};
+
+startMqttIngest(config);
+startUpstreamPuller(config);
+
+app.get("/api/health", (_req, res) => {
+  res.json({ ok: true, service: "nordic-web-dashboard", ts: Date.now() });
+});
+
+app.get("/api/nodes", (_req, res) => {
+  res.json({ items: getAllNodes() });
+});
+
+app.get("/api/nodes/:nodeId", (req, res) => {
+  const found = getNode(req.params.nodeId);
+  if (!found) {
+    res.status(404).json({ error: "node_not_found" });
+    return;
+  }
+  res.json(found);
+});
+
+// Optional ingestion endpoint for your server-side bridge:
+// POST /api/ingest with json: { nodeId, temperature, humidity, battery, ... }
+app.post("/api/ingest", (req, res) => {
+  const saved = upsertNodeTelemetry(req.body || {}, req.body?.nodeId);
+  res.json({ ok: true, item: saved });
+});
+
+app.post("/api/pull-once", async (_req, res) => {
+  try {
+    const result = await pullOnce(config);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, reason: err.message });
+  }
+});
+
+app.listen(config.PORT, () => {
+  console.log(`[http] dashboard running: http://localhost:${config.PORT}`);
+});

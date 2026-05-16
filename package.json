@@ -1,0 +1,24 @@
+{
+  "name": "nordic-web-dashboard",
+  "version": "0.1.0",
+  "description": "nRF node dashboard for CoAP/MQTT uplink data on your server",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "keywords": [
+    "nrf",
+    "coap",
+    "mqtt",
+    "dashboard",
+    "iot"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "mqtt": "^5.14.1"
+  }
+}
