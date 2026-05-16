@@ -171,6 +171,12 @@ function shouldBumpDeviceSeen(source, isSnapshot) {
   return true;
 }
 
+function normalizeSourceName(source) {
+  return String(source || "")
+    .trim()
+    .toLowerCase();
+}
+
 function appendNodeHistory(nodeId, point) {
   const key = normalizeStringId(nodeId) || "unknown";
   const prev = nodeHistoryMap.get(key) || [];
@@ -196,6 +202,7 @@ function trimRawPayload(raw, maxBytes) {
 function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
   const source = options.source || "unknown";
   const isSnapshot = options.isSnapshot === true;
+  const normalizedSource = normalizeSourceName(source) || "unknown";
   const normalized = normalizePayload(payload, fallbackNodeId);
   const prev = nodeMap.get(normalized.nodeId) || {};
   const now = Date.now();
@@ -215,23 +222,25 @@ function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
   const prevRaw = prev.raw || null;
   const changed = stableStringify(prevRaw) !== stableStringify(normalized.raw || null);
   merged.lastSeenAt = now;
-  merged.lastDeviceSeenAt = shouldBumpDeviceSeen(source, isSnapshot) ? now : prev.lastDeviceSeenAt || null;
+  const isDeviceSource = shouldBumpDeviceSeen(normalizedSource, isSnapshot);
+  merged.lastDeviceSeenAt = isDeviceSource ? now : prev.lastDeviceSeenAt || null;
   merged.updatedAt = changed ? now : prev.updatedAt || now;
-  merged.lastSource = source;
+  merged.lastSource = isDeviceSource ? normalizedSource : prev.lastSource || "unknown";
+  merged.lastSnapshotSource = isSnapshot ? normalizedSource : prev.lastSnapshotSource || null;
 
   const sourceUpdatedAt = { ...(prev.sourceUpdatedAt || {}) };
-  const prevSourceRaw = prev.sourceRaw && prev.sourceRaw[source] ? prev.sourceRaw[source] : null;
+  const prevSourceRaw = prev.sourceRaw && prev.sourceRaw[normalizedSource] ? prev.sourceRaw[normalizedSource] : null;
   const currentSourceRaw = trimRawPayload(normalized.raw || null, MAX_SOURCE_RAW_BYTES);
   const sourceChanged = safeStableStringify(prevSourceRaw, MAX_SOURCE_RAW_BYTES) !== safeStableStringify(currentSourceRaw, MAX_SOURCE_RAW_BYTES);
-  sourceUpdatedAt[source] = sourceChanged ? now : sourceUpdatedAt[source] || now;
+  sourceUpdatedAt[normalizedSource] = sourceChanged ? now : sourceUpdatedAt[normalizedSource] || now;
   merged.sourceUpdatedAt = sourceUpdatedAt;
 
   const sourceLastSeenAt = { ...(prev.sourceLastSeenAt || {}) };
-  sourceLastSeenAt[source] = now;
+  sourceLastSeenAt[normalizedSource] = now;
   merged.sourceLastSeenAt = sourceLastSeenAt;
 
   const sourceRaw = { ...(prev.sourceRaw || {}) };
-  sourceRaw[source] = currentSourceRaw;
+  sourceRaw[normalizedSource] = currentSourceRaw;
   merged.sourceRaw = sourceRaw;
 
   nodeMap.set(normalized.nodeId, merged);
@@ -241,7 +250,7 @@ function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
     temperature: merged.temperature ?? null,
     humidity: merged.humidity ?? null,
     battery: merged.battery ?? null,
-    source,
+    source: normalizedSource,
     raw: trimRawPayload(normalized.raw || {}, MAX_HISTORY_RAW_BYTES)
   });
   return nodeMap.get(normalized.nodeId);

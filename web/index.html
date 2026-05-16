@@ -660,6 +660,8 @@
           const sourceBadge = sourceKeys.length
             ? sourceKeys.map((s) => String(s).toUpperCase()).join("|")
             : String(item.lastSource || "unknown").toUpperCase();
+          const sourceMain = String(item.lastSource || "unknown").toUpperCase();
+          const snapshotSource = String(item.lastSnapshotSource || "rest").toUpperCase();
           card.innerHTML = `
             <div class="nodeTop">
               <div class="nodeId">${escapeHtml(item.nodeId)}</div>
@@ -669,6 +671,7 @@
               </div>
             </div>
             <div class="time">data: ${escapeHtml(timeAgo(item.updatedAt))} | device seen: ${escapeHtml(timeAgo(item.lastDeviceSeenAt))} | snapshot seen: ${escapeHtml(timeAgo(item.lastSeenAt || item.updatedAt))}</div>
+            <div class="time">device source: ${escapeHtml(sourceMain)} | snapshot source: ${escapeHtml(snapshotSource)}</div>
             <div class="metrics">
               <div class="metric"><div class="mk">Temp</div><div class="mv">${fmtSafe(item.temperature, " C")}</div></div>
               <div class="metric"><div class="mk">Humidity</div><div class="mv">${fmtSafe(item.humidity, " %")}</div></div>

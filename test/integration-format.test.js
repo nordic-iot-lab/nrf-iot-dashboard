@@ -63,9 +63,10 @@ test("source fields should be tracked per protocol", async () => {
   resetStore();
   const first = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "mqtt" });
   await new Promise((r) => setTimeout(r, 3));
-  const second = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "rest" });
+  const second = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "rest", isSnapshot: true });
 
-  assert.equal(second.lastSource, "rest");
+  assert.equal(second.lastSource, "mqtt");
+  assert.equal(second.lastSnapshotSource, "rest");
   assert.ok(second.sourceLastSeenAt.mqtt > 0);
   assert.ok(second.sourceLastSeenAt.rest > 0);
   assert.ok(second.sourceUpdatedAt.mqtt > 0);
@@ -78,7 +79,7 @@ test("rest snapshot should not bump device seen time", async () => {
   const first = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "mqtt" });
   const firstDeviceSeenAt = first.lastDeviceSeenAt;
   await new Promise((r) => setTimeout(r, 3));
-  const second = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "rest" });
+  const second = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "rest", isSnapshot: true });
 
   assert.equal(second.lastDeviceSeenAt, firstDeviceSeenAt);
   assert.ok(second.lastSeenAt >= first.lastSeenAt);
@@ -124,7 +125,8 @@ test("upstream payload source should override rest default", async () => {
     const result = await pullOnce({ UPSTREAM_PULL_URL: "http://fake.local/sensor" });
     assert.equal(result.ok, true);
     const row = getAllNodes().find((x) => x.nodeId === "0001");
-    assert.equal(row.lastSource, "coap");
+    assert.equal(row.lastSnapshotSource, "coap");
+    assert.equal(row.lastSource, "unknown");
   } finally {
     global.fetch = originalFetch;
   }
@@ -147,7 +149,8 @@ test("upstream topic-like coap marker should map to coap-mqtt", async () => {
     const result = await pullOnce({ UPSTREAM_PULL_URL: "http://fake.local/sensor" });
     assert.equal(result.ok, true);
     const row = getAllNodes().find((x) => x.nodeId === "9512");
-    assert.equal(row.lastSource, "coap-mqtt");
+    assert.equal(row.lastSnapshotSource, "coap-mqtt");
+    assert.equal(row.lastSource, "unknown");
   } finally {
     global.fetch = originalFetch;
   }
