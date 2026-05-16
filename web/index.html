@@ -605,6 +605,17 @@
         return "ok";
       }
 
+      function protocolBadge(item) {
+        const keys = Object.keys(item.sourceLastSeenAt || {}).map((x) => String(x || "").toLowerCase());
+        const hasMqtt = keys.includes("mqtt");
+        const hasCoapStream = keys.includes("coap") || keys.includes("coap-mqtt");
+        const hasCoapSnapshot = keys.includes("rest") || String(item.lastSnapshotSource || "").toLowerCase() === "rest";
+        if (hasMqtt && (hasCoapStream || hasCoapSnapshot)) return "COAP+MQTT";
+        if (hasCoapStream || hasCoapSnapshot) return "COAP";
+        if (hasMqtt) return "MQTT";
+        return String(item.lastSource || "unknown").toUpperCase();
+      }
+
       function drawKpis(items) {
         const gpsCount = items.filter((x) => isFiniteCoord(x.lat) && isFiniteCoord(x.lng)).length;
         const batt = avg(items, "battery");
@@ -656,7 +667,7 @@
           card.className = `nodeCard${selectedNodeId === item.nodeId ? " selected" : ""}${sev === "alert" ? " alert" : sev === "warn" ? " warn" : ""}`;
           const badgeClass = sev === "alert" ? "badge alert" : sev === "warn" ? "badge warn" : "badge";
           const badgeText = sev === "alert" ? "ALERT" : sev === "warn" ? "LOW BAT" : "NORMAL";
-          const sourceMain = String(item.lastSource || "unknown").toUpperCase();
+          const sourceMain = protocolBadge(item);
           const snapshotSourceRaw = String(item.lastSnapshotSource || "rest").toUpperCase();
           const snapshotSource = snapshotSourceRaw === "REST" ? "COAP-REST" : snapshotSourceRaw;
           const snapshotBadge = snapshotSource ? `SNAP:${snapshotSource}` : "";
