@@ -23,6 +23,32 @@ Data flow: nRF -> CoAP/MQTT -> your server/broker -> this dashboard backend -> w
   - co2
 - GPS map view (OpenStreetMap + Leaflet) with node markers
 
+## Mecho integration profile
+
+This project now supports your current production endpoints directly:
+
+- REST latest snapshot: `https://coap.mecho.top/sensor`
+- MQTT WebSocket: `wss://mqtt.mecho.top/mqtt`
+- MQTT topic: `sensor/+/data`
+
+`GET /sensor` object-map responses are supported, for example:
+
+```json
+{
+  "a1b2": {"mac_last4":"a1b2","temperature":30.1,"humidity":55},
+  "c3d4": {"mac":"cc:dd:ee:ff:c3:d4","temperature":22.7,"humidity":60},
+  "0001": {"device":"ISTAG-0001","temp_c":32,"battery_pct":87}
+}
+```
+
+Normalization highlights:
+
+- Node id sources: `nodeId`, `device_id`, `mac_last4`, `mac` (auto last-4 extract), or map key fallback
+- Temperature aliases: `temperature`, `temp`, `temp_c`
+- Battery aliases: `battery`, `battery_mv`, `battery_pct`
+- Status aliases: `status`, `state`
+- ISTAG fields like `events`, `urgent`, `vibration_mg`, `tilt_deg` are preserved
+
 ## Quick start
 
 ```bash

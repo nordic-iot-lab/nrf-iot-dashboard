@@ -1,5 +1,19 @@
 const nodeMap = new Map();
 
+function normalizeStringId(value) {
+  if (value === null || value === undefined) return "";
+  return String(value).trim().toLowerCase();
+}
+
+function extractMacLast4(value) {
+  if (!value) return "";
+  const compact = String(value)
+    .toLowerCase()
+    .replace(/[^a-f0-9]/g, "");
+  if (compact.length < 4) return "";
+  return compact.slice(-4);
+}
+
 function toNumber(value) {
   if (value === null || value === undefined || value === "") {
     return null;
@@ -71,22 +85,44 @@ function extractCoordinates(payload) {
   return { lat, lng };
 }
 
+function resolveNodeId(payload, fallbackNodeId) {
+  const direct =
+    payload.nodeId ??
+    payload.node_id ??
+    payload.deviceId ??
+    payload.device_id ??
+    payload.mac_last4 ??
+    payload.macLast4 ??
+    extractMacLast4(payload.mac);
+
+  const normalizedDirect = normalizeStringId(direct);
+  if (normalizedDirect) return normalizedDirect;
+
+  const normalizedFallback = normalizeStringId(fallbackNodeId);
+  if (normalizedFallback) return normalizedFallback;
+
+  return "unknown";
+}
+
 function normalizePayload(payload, fallbackNodeId) {
-  const nodeId = String(
-    payload.nodeId || payload.node_id || payload.deviceId || payload.device_id || fallbackNodeId || "unknown"
-  );
+  const nodeId = resolveNodeId(payload, fallbackNodeId);
   const { lat, lng } = extractCoordinates(payload);
 
   const now = Date.now();
   return {
     nodeId,
-    temperature: payload.temperature ?? payload.temp ?? null,
-    humidity: payload.humidity ?? null,
-    battery: payload.battery ?? payload.battery_mv ?? null,
-    rssi: payload.rssi ?? null,
-    voltage: payload.voltage ?? null,
+    temperature: payload.temperature ?? payload.temp ?? payload.temp_c ?? payload.tempC ?? null,
+    humidity: payload.humidity ?? payload.humi ?? payload.hum ?? null,
+    battery: payload.battery ?? payload.battery_mv ?? payload.battery_pct ?? payload.batteryPercent ?? null,
+    rssi: payload.rssi ?? payload.signal_dbm ?? null,
+    voltage: payload.voltage ?? payload.vbat ?? payload.vbat_v ?? null,
     co2: payload.co2 ?? null,
     pm25: payload.pm25 ?? null,
+    status: payload.status ?? payload.state ?? null,
+    events: payload.events ?? null,
+    urgent: payload.urgent ?? null,
+    vibrationMg: payload.vibration_mg ?? payload.vibrationMg ?? null,
+    tiltDeg: payload.tilt_deg ?? payload.tiltDeg ?? null,
     lat,
     lng,
     raw: payload,
@@ -122,8 +158,13 @@ function getNode(nodeId) {
   return nodeMap.get(nodeId);
 }
 
+function resetStore() {
+  nodeMap.clear();
+}
+
 module.exports = {
   upsertNodeTelemetry,
   getAllNodes,
-  getNode
+  getNode,
+  resetStore
 };

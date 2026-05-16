@@ -2,13 +2,21 @@ const { upsertNodeTelemetry } = require("./nodeStore");
 
 function normalizeItems(data) {
   if (Array.isArray(data)) {
-    return data;
+    return data.map((item) => ({ payload: item, fallbackNodeId: item?.nodeId || item?.node_id }));
   }
   if (data && Array.isArray(data.items)) {
-    return data.items;
+    return data.items.map((item) => ({ payload: item, fallbackNodeId: item?.nodeId || item?.node_id }));
   }
   if (data && Array.isArray(data.nodes)) {
-    return data.nodes;
+    return data.nodes.map((item) => ({ payload: item, fallbackNodeId: item?.nodeId || item?.node_id }));
+  }
+
+  // Object map style: { "a1b2": { ... }, "c3d4": { ... } }
+  if (data && typeof data === "object") {
+    return Object.entries(data).map(([key, value]) => ({
+      payload: value || {},
+      fallbackNodeId: key
+    }));
   }
   return [];
 }
@@ -33,7 +41,7 @@ async function pullOnce(config) {
 
   let count = 0;
   for (const item of items) {
-    upsertNodeTelemetry(item, item?.nodeId || item?.node_id);
+    upsertNodeTelemetry(item.payload, item.fallbackNodeId);
     count += 1;
   }
 

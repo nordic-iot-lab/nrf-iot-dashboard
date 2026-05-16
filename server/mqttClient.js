@@ -1,13 +1,6 @@
 const mqtt = require("mqtt");
 const { upsertNodeTelemetry } = require("./nodeStore");
-
-function parseNodeIdFromTopic(topic) {
-  const parts = topic.split("/");
-  if (parts.length >= 2) {
-    return parts[1];
-  }
-  return "unknown";
-}
+const { parseNodeIdFromTopic } = require("./topicParser");
 
 function startMqttIngest(config) {
   const client = mqtt.connect(config.MQTT_BROKER_URL, {
