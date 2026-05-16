@@ -4,6 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>nRF Node Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
     <style>
       :root {
         --bg: #f5f7fb;
@@ -39,7 +45,7 @@
         border-radius: 8px;
         padding: 12px;
         display: grid;
-        grid-template-columns: 1fr 1fr auto auto;
+        grid-template-columns: 1fr 1fr auto auto auto;
         gap: 10px;
       }
       input, select, button {
@@ -62,6 +68,54 @@
         background: #fff;
         color: var(--text);
         border-color: var(--line);
+      }
+      .gpsOnlyLabel {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 10px;
+        font-size: 14px;
+        background: #fff;
+        height: 40px;
+      }
+      .gpsOnlyLabel input {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+      }
+      .mapBand {
+        margin-top: 14px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .mapHead {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      .mapTitle {
+        font-weight: 700;
+      }
+      .mapSub {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      #map {
+        width: 100%;
+        height: 400px;
+      }
+      .mapNote {
+        padding: 10px 12px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 12px;
       }
       .grid {
         margin-top: 16px;
@@ -103,6 +157,8 @@
       .status { font-size: 12px; font-weight: 600; }
       .ok { color: var(--ok); }
       .warn { color: var(--warn); }
+      .clickable { cursor: pointer; }
+      .clickable:hover { border-color: #b8c9e3; }
       .empty {
         margin-top: 12px;
         padding: 16px;
@@ -113,6 +169,7 @@
       }
       @media (max-width: 800px) {
         .toolbar { grid-template-columns: 1fr 1fr; }
+        #map { height: 320px; }
       }
     </style>
   </head>
@@ -133,26 +190,66 @@
           <option value="temperature">Sort: temperature</option>
           <option value="battery">Sort: battery</option>
         </select>
+        <label class="gpsOnlyLabel"><input id="gpsOnly" type="checkbox" /> GPS only</label>
         <button id="refreshBtn">Refresh</button>
         <button id="autoBtn" class="secondary">Auto: ON</button>
       </div>
+
+      <section class="mapBand">
+        <div class="mapHead">
+          <div class="mapTitle">Live GPS Map</div>
+          <div id="mapStats" class="mapSub">0 nodes with GPS</div>
+        </div>
+        <div id="map"></div>
+        <div class="mapNote">Click a marker to view node metrics. Click a node card to focus map.</div>
+      </section>
 
       <div id="grid" class="grid"></div>
       <div id="empty" class="empty" style="display:none;">No node data yet. Publish MQTT data or call POST /api/ingest.</div>
     </div>
 
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
     <script>
       const grid = document.getElementById("grid");
       const empty = document.getElementById("empty");
       const filterInput = document.getElementById("filterInput");
       const sortSelect = document.getElementById("sortSelect");
+      const gpsOnlyInput = document.getElementById("gpsOnly");
       const refreshBtn = document.getElementById("refreshBtn");
       const autoBtn = document.getElementById("autoBtn");
       const health = document.getElementById("health");
+      const mapStats = document.getElementById("mapStats");
 
       let latest = [];
       let timer = null;
       let autoMode = true;
+      let map = null;
+      let tileLayer = null;
+      let markerLayer = null;
+      let firstFitDone = false;
+      const markerByNodeId = new Map();
+
+      function isFiniteCoord(v) {
+        return typeof v === "number" && Number.isFinite(v);
+      }
+
+      function initMap() {
+        if (!window.L || map) return;
+        map = L.map("map", {
+          zoomControl: true
+        }).setView([39.9042, 116.4074], 4);
+
+        tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: "&copy; OpenStreetMap contributors"
+        }).addTo(map);
+
+        markerLayer = L.layerGroup().addTo(map);
+      }
 
       const fmt = (value, unit = "") => {
         if (value === null || value === undefined || value === "") return "--";
@@ -170,8 +267,12 @@
       function draw() {
         const filterText = filterInput.value.trim().toLowerCase();
         const sortBy = sortSelect.value;
+        const gpsOnly = gpsOnlyInput.checked;
 
         let items = latest.filter((x) => x.nodeId.toLowerCase().includes(filterText));
+        if (gpsOnly) {
+          items = items.filter((x) => isFiniteCoord(x.lat) && isFiniteCoord(x.lng));
+        }
 
         items.sort((a, b) => {
           if (sortBy === "updatedAt") return (b.updatedAt || 0) - (a.updatedAt || 0);
@@ -189,7 +290,8 @@
 
         for (const item of items) {
           const card = document.createElement("article");
-          card.className = "card";
+          card.className = "card clickable";
+          card.dataset.nodeId = item.nodeId;
           card.innerHTML = `
             <div class="cardTop">
               <div class="nodeId">${item.nodeId}</div>
@@ -202,9 +304,48 @@
               <div class="item"><div class="k">RSSI</div><div class="v">${fmt(item.rssi, " dBm")}</div></div>
               <div class="item"><div class="k">Voltage</div><div class="v">${fmt(item.voltage, " V")}</div></div>
               <div class="item"><div class="k">CO2</div><div class="v">${fmt(item.co2, " ppm")}</div></div>
+              <div class="item"><div class="k">Latitude</div><div class="v">${fmt(item.lat)}</div></div>
+              <div class="item"><div class="k">Longitude</div><div class="v">${fmt(item.lng)}</div></div>
             </div>
           `;
+
+          card.addEventListener("click", () => {
+            const marker = markerByNodeId.get(item.nodeId);
+            if (!map || !marker) return;
+            map.setView(marker.getLatLng(), Math.max(map.getZoom(), 13), { animate: true });
+            marker.openPopup();
+          });
           grid.appendChild(card);
+        }
+
+        drawMap(items);
+      }
+
+      function drawMap(items) {
+        initMap();
+        if (!map || !markerLayer) return;
+
+        markerLayer.clearLayers();
+        markerByNodeId.clear();
+
+        const gpsItems = items.filter((x) => isFiniteCoord(x.lat) && isFiniteCoord(x.lng));
+        mapStats.textContent = `${gpsItems.length} node${gpsItems.length === 1 ? "" : "s"} with GPS`;
+
+        const bounds = [];
+        for (const item of gpsItems) {
+          const marker = L.marker([item.lat, item.lng]);
+          marker.bindPopup(
+            `<strong>${item.nodeId}</strong><br/>Lat: ${item.lat}<br/>Lng: ${item.lng}<br/>Temp: ${fmt(item.temperature)}<br/>Battery: ${fmt(item.battery)}`
+          );
+          marker.addTo(markerLayer);
+          markerByNodeId.set(item.nodeId, marker);
+          bounds.push([item.lat, item.lng]);
+        }
+
+        if (!bounds.length) return;
+        if (!firstFitDone) {
+          map.fitBounds(bounds, { padding: [28, 28] });
+          firstFitDone = true;
         }
       }
 
@@ -240,8 +381,10 @@
       refreshBtn.addEventListener("click", refresh);
       filterInput.addEventListener("input", draw);
       sortSelect.addEventListener("change", draw);
+      gpsOnlyInput.addEventListener("change", draw);
       autoBtn.addEventListener("click", () => setAutoMode(!autoMode));
 
+      initMap();
       setAutoMode(true);
       checkHealth();
       refresh();

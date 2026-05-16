@@ -21,6 +21,7 @@ Data flow: nRF -> CoAP/MQTT -> your server/broker -> this dashboard backend -> w
   - rssi
   - voltage
   - co2
+- GPS map view (OpenStreetMap + Leaflet) with node markers
 
 ## Quick start
 
@@ -70,11 +71,14 @@ Payload example:
   "battery": 3710,
   "rssi": -65,
   "voltage": 3.71,
-  "co2": 611
+  "co2": 611,
+  "lat": 31.2304,
+  "lng": 121.4737
 }
 ```
 
 If `nodeId` is missing in payload, backend falls back to topic segment (e.g. `nrf-001` from `nrf/nrf-001/telemetry`).
+GPS aliases are accepted too: `latitude/longitude`, `lat/lon`, `gps.lat/gps.lon`, `location.latitude/location.longitude`.
 
 ## CoAP payload example
 
