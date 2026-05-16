@@ -5,7 +5,7 @@ const { startMqttIngest } = require("./mqttClient");
 const { startCoapIngest } = require("./coapServer");
 const { upsertNodeTelemetry, getAllNodes, getNode, getNodeHistory } = require("./nodeStore");
 const { startUpstreamPuller, pullOnce } = require("./upstreamPuller");
-const { createHistoryStore } = require("./historyStore");
+const { createHistoryStore, normalizeLimit } = require("./historyStore");
 
 dotenv.config();
 
@@ -40,16 +40,10 @@ const config = {
   PG_QUERY_TIMEOUT_MS: Number(process.env.PG_QUERY_TIMEOUT_MS || 4000)
 };
 
-function normalizeLimit(value, fallback = 100) {
-  const n = Number.parseInt(String(value || ""), 10);
-  const valid = Number.isFinite(n) ? n : fallback;
-  return Math.max(1, Math.min(500, valid));
-}
-
 function requireWriteToken(req, res, next) {
   const expected = String(config.API_WRITE_TOKEN || "").trim();
   if (!expected) {
-    res.status(503).json({ error: "write_token_not_configured" });
+    res.status(403).json({ error: "write_endpoints_disabled" });
     return;
   }
   const auth = String(req.headers.authorization || "");
@@ -59,6 +53,10 @@ function requireWriteToken(req, res, next) {
     return;
   }
   next();
+}
+
+if (!String(config.API_WRITE_TOKEN || "").trim()) {
+  console.warn("[auth] API_WRITE_TOKEN is not set - write endpoints are disabled");
 }
 
 startMqttIngest(config);

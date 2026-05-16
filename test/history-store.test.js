@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const {
   topicForNodeId,
   topicForNodeIdByTemplate,
+  hasTopicPlaceholder,
   normalizeLimit,
   buildNodeRecord
 } = require("../server/historyStore");
@@ -25,6 +26,13 @@ test("normalizeLimit should clamp and fallback on invalid values", () => {
   assert.equal(normalizeLimit("abc", 100), 100);
   assert.equal(normalizeLimit("9999", 100), 500);
   assert.equal(normalizeLimit("-5", 100), 1);
+});
+
+test("hasTopicPlaceholder should validate template placeholders", () => {
+  assert.equal(hasTopicPlaceholder(""), false);
+  assert.equal(hasTopicPlaceholder("sensor/fixed/data"), false);
+  assert.equal(hasTopicPlaceholder("sensor/+/data"), true);
+  assert.equal(hasTopicPlaceholder("sensor/{nodeId}/data"), true);
 });
 
 test("buildNodeRecord should normalize history payload", () => {

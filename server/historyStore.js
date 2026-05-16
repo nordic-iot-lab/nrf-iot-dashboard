@@ -58,6 +58,12 @@ function topicForNodeIdByTemplate(nodeId, topicTemplate) {
   return template;
 }
 
+function hasTopicPlaceholder(topicTemplate) {
+  const template = String(topicTemplate || "").trim();
+  if (!template) return false;
+  return template.includes("+") || template.includes("{nodeId}");
+}
+
 function normalizeLimit(limit, fallback = 100) {
   const n = Number.parseInt(String(limit || ""), 10);
   const valid = Number.isFinite(n) ? n : fallback;
@@ -94,6 +100,11 @@ function createHistoryStore(config) {
   const topicTemplate = config.HISTORY_TOPIC_TEMPLATE || config.MQTT_TOPIC || "sensor/+/data";
   console.log(`[pg] history store enabled -> ${config.PG_HOST}:${config.PG_PORT}/${config.PG_DATABASE}`);
   console.log(`[pg] history topic template -> ${topicTemplate}`);
+  if (!hasTopicPlaceholder(topicTemplate)) {
+    console.warn(
+      `[pg] history topic template "${topicTemplate}" has no placeholder (+/{nodeId}); all nodes will query the same topic`
+    );
+  }
 
   return {
     isEnabled: () => true,
@@ -122,6 +133,7 @@ module.exports = {
   createHistoryStore,
   topicForNodeId,
   topicForNodeIdByTemplate,
+  hasTopicPlaceholder,
   normalizeLimit,
   buildNodeRecord
 };
