@@ -1,76 +1,51 @@
-# nRF CoAP/MQTT Data Dashboard
+# nRF IoT Dashboard
 
-Web dashboard for nRF nodes.  
-Data flow: nRF -> CoAP/MQTT -> your server/broker -> this dashboard backend -> web UI.
+![Dashboard data flow](docs/dashboard-flow.svg)
 
-## What is included
+> 中文：面向 nRF/NB-IoT 节点的 Web 面板，统一展示 MQTT、CoAP、HTTP 和 REST 拉取进入的数据，支持节点卡片、历史趋势和 GPS 地图。
+>
+> English: Web dashboard for nRF/NB-IoT nodes. It normalizes MQTT, CoAP, HTTP ingest, and REST-pulled telemetry into node cards, history charts, and GPS map markers.
 
-- MQTT ingest from your broker topic (default: `nrf/+/telemetry`)
-- CoAP ingest server (default `coap://0.0.0.0:5683`)
-- Optional HTTP ingest endpoint for bridge service: `POST /api/ingest`
-- Optional puller from your own server endpoint: `UPSTREAM_PULL_URL`
-- Node telemetry APIs:
-  - `GET /api/health`
-- `GET /api/nodes`
-- `GET /api/nodes/:nodeId`
-- `POST /api/pull-once` (manual pull from your upstream)
-- Frontend page for per-node metrics display:
-  - temperature
-  - humidity
-  - battery
-  - rssi
-  - voltage
-  - co2
-- GPS map view (OpenStreetMap + Leaflet) with node markers
-- Node alarm highlight (`status=alert`, high temperature, low battery)
-- Historical trend API and mini charts per selected node
+## 中文简介
 
-## Mecho integration profile
+这个仓库是 Nordic IoT Lab 的前端和轻量后端。它可以直接订阅 MQTT broker，也可以接收 CoAP/HTTP 上报，或者从已有服务器 REST 接口拉取快照。所有数据会被归一化为节点状态，然后展示在网页面板上。
 
-This project now supports your current production endpoints directly:
+适合用于：
 
-- Web panel: `https://nrf.mecho.top`
-- MQTT backend ingest: `mqtts://mqtt.mecho.top:8883`
-- MQTT topic: `sensor/+/data`
-- Optional REST snapshot compatibility: `GET https://coap.mecho.top/sensor`
+- 看每个节点最后一次上报的数据
+- 区分 MQTT plain、MQTT TLS、CoAP plain、CoAP DTLS 等来源
+- 展示温湿度、电池、电压、RSSI、CO2、GPS 等字段
+- 在 OpenStreetMap/Leaflet 地图上查看节点位置
+- 从 PostgreSQL 查询历史趋势
+- 作为部署在 `nrf.mecho.top` 这类域名后的 Web 控制台
 
-`GET /sensor` object-map responses are supported, for example:
+## English Overview
 
-```json
-{
-  "a1b2": {"mac_last4":"a1b2","temperature":30.1,"humidity":55},
-  "c3d4": {"mac":"cc:dd:ee:ff:c3:d4","temperature":22.7,"humidity":60},
-  "0001": {"device":"ISTAG-0001","temp_c":32,"battery_pct":87}
-}
+This repository contains the dashboard service for Nordic IoT Lab. It can subscribe to an MQTT broker, receive CoAP/HTTP telemetry directly, or pull snapshots from an existing REST endpoint. Incoming payloads are normalized into node snapshots and rendered in the web UI.
+
+Useful for:
+
+- Viewing the latest telemetry per node
+- Separating MQTT plain, MQTT TLS, CoAP plain, and CoAP DTLS sources
+- Displaying temperature, humidity, battery, voltage, RSSI, CO2, and GPS fields
+- Showing node positions on an OpenStreetMap/Leaflet map
+- Querying historical trends from PostgreSQL
+- Running behind a production web domain such as `nrf.mecho.top`
+
+## Data Flow / 数据流
+
+```text
+nRF firmware -> MQTT/CoAP/HTTP/REST -> dashboard backend -> normalized node store -> web UI
 ```
 
-Normalization highlights:
+Supported ingestion paths:
 
-- Node id sources: `nodeId`, `device_id`, `mac_last4`, `mac` (auto last-4 extract), or map key fallback
-- Temperature aliases: `temperature`, `temp`, `temp_c`
-- Battery aliases: `battery`, `battery_mv`, `battery_pct`
-- Status aliases: `status`, `state`
-- ISTAG fields like `events`, `urgent`, `vibration_mg`, `tilt_deg` are preserved
+- MQTT topic subscription, default `nrf/+/telemetry`
+- CoAP JSON receiver, default `coap://0.0.0.0:5683`
+- HTTP bridge endpoint, `POST /api/ingest`
+- REST snapshot puller via `UPSTREAM_PULL_URL`
 
-## History API
-
-When PostgreSQL is enabled, query node history from `mqtt_messages`:
-
-- `GET /api/nodes/:nodeId/history?limit=100`
-
-Response:
-
-```json
-{
-  "nodeId": "a1b2",
-  "source": "postgres",
-  "items": [
-    {"nodeId":"a1b2","timestamp":1778920000000,"temperature":30.1,"humidity":55,"battery":87}
-  ]
-}
-```
-
-## Quick start
+## Quick Start / 快速开始
 
 ```bash
 npm install
@@ -84,63 +59,40 @@ Open:
 http://localhost:8080
 ```
 
-## Run with Docker
-
-Use your existing `.env` (or copy from `.env.example`) and run:
+Run with Docker:
 
 ```bash
 docker compose up -d --build
-```
-
-Check logs:
-
-```bash
 docker compose logs -f
 ```
 
-Stop:
+## APIs / 接口
 
-```bash
-docker compose down
-```
+- `GET /api/health`
+- `GET /api/nodes`
+- `GET /api/nodes/:nodeId`
+- `GET /api/nodes/:nodeId/history?limit=100`
+- `GET /sensor`
+- `POST /api/ingest`
+- `POST /api/internal/store`
+- `POST /api/pull-once`
 
-If you want this app to pull from your server, set `UPSTREAM_PULL_URL`. In the EMQX-centered deployment, leave it empty:
+Write endpoints require `API_WRITE_TOKEN` when enabled.
 
-```env
-UPSTREAM_PULL_URL=https://your-server.example.com/api/nrf/latest
-UPSTREAM_PULL_INTERVAL_MS=8000
-UPSTREAM_AUTH_TOKEN=your_token_if_needed
-```
+## Payload Example / 数据示例
 
-If your broker uses a private CA, point the backend subscriber at that CA file:
-
-```env
-MQTT_BROKER_URL=mqtts://mqtt.mecho.top:8883
-MQTT_CA_CERT_PATH=/app/certs/ca.pem
-MQTT_ALLOW_INSECURE_TLS=false
-```
-
-When EMQX is your single ingress, keep direct CoAP ingest disabled in the panel service:
-
-```env
-COAP_ENABLED=false
-COAP_HOST=0.0.0.0
-COAP_PORT=5683
-```
-
-## MQTT payload example
-
-Topic example:
+MQTT topic:
 
 ```text
 nrf/nrf-001/telemetry
 ```
 
-Payload example:
+JSON payload:
 
 ```json
 {
   "nodeId": "nrf-001",
+  "mode": "mqtt_tls",
   "temperature": 24.6,
   "humidity": 53.1,
   "battery": 3710,
@@ -152,46 +104,36 @@ Payload example:
 }
 ```
 
-If `nodeId` is missing in payload, backend falls back to topic segment (e.g. `nrf-001` from `nrf/nrf-001/telemetry`).
-GPS aliases are accepted too: `latitude/longitude`, `lat/lon`, `gps.lat/gps.lon`, `location.latitude/location.longitude`.
+Accepted aliases include:
 
-## CoAP payload example
+- Node ID: `nodeId`, `device_id`, `mac_last4`, `mac`
+- Temperature: `temperature`, `temp`, `temp_c`
+- Battery: `battery`, `battery_mv`, `battery_pct`
+- GPS: `lat/lng`, `lat/lon`, `latitude/longitude`, `gps.lat/gps.lon`, `location.latitude/location.longitude`
 
-Endpoint:
+## Mecho Deployment Profile / Mecho 部署配置
+
+- Web panel: `https://nrf.mecho.top`
+- MQTT backend ingest: `mqtts://mqtt.mecho.top:8883`
+- MQTT topic: `sensor/+/data`
+- Optional REST snapshot: `GET https://coap.mecho.top/sensor`
+
+When EMQX is the single ingress, keep direct CoAP disabled in this service:
+
+```env
+COAP_ENABLED=false
+MQTT_BROKER_URL=mqtts://mqtt.mecho.top:8883
+MQTT_TOPIC=sensor/+/data
+MQTT_CA_CERT_PATH=/app/certs/ca.pem
+MQTT_ALLOW_INSECURE_TLS=false
+```
+
+## Release / 版本
+
+Current dashboard baseline:
 
 ```text
-coap://your-server-ip:5683/telemetry
+v0.9.1
 ```
 
-Or include node id in path:
-
-```text
-coap://your-server-ip:5683/telemetry/nrf-001
-```
-
-Method: `POST` or `PUT`  
-Payload: JSON (same schema as MQTT payload).
-
-## HTTP ingest example
-
-```bash
-curl -X POST http://localhost:8080/api/ingest \
-  -H "Content-Type: application/json" \
-  -d '{"nodeId":"nrf-002","temperature":26.2,"humidity":49.8,"battery":3660}'
-```
-
-## Upstream response accepted formats
-
-Any of the following:
-
-```json
-[{"nodeId":"nrf-001","temperature":24.8}]
-```
-
-```json
-{"items":[{"nodeId":"nrf-001","temperature":24.8}]}
-```
-
-```json
-{"nodes":[{"nodeId":"nrf-001","temperature":24.8}]}
-```
+Previous production test baseline: `v0.9.0`.
