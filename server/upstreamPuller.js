@@ -1,4 +1,4 @@
-const { upsertNodeTelemetry } = require("./nodeStore");
+const { upsertNodeTelemetry, pruneSnapshotNodes } = require("./nodeStore");
 
 function normalizeSource(value) {
   const text = String(value || "")
@@ -64,13 +64,18 @@ async function pullOnce(config) {
   const items = normalizeItems(data);
 
   let count = 0;
+  const snapshotIds = new Set();
+  let snapshotSource = "rest";
   for (const item of items) {
     const payloadSource = normalizeSource(item.payload?.source);
     const guessed = guessSourceFromTopicLikeFields(item.payload);
     const source = guessed || payloadSource || "rest";
-    upsertNodeTelemetry(item.payload, item.fallbackNodeId, { source, isSnapshot: true });
+    const saved = upsertNodeTelemetry(item.payload, item.fallbackNodeId, { source, isSnapshot: true });
+    snapshotIds.add(saved.nodeId);
+    snapshotSource = source || snapshotSource;
     count += 1;
   }
+  pruneSnapshotNodes(snapshotIds, snapshotSource || "rest");
 
   return { ok: true, count };
 }

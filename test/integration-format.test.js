@@ -1,7 +1,14 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { upsertNodeTelemetry, getAllNodes, getNode, getNodeHistory, resetStore } = require("../server/nodeStore");
+const {
+  upsertNodeTelemetry,
+  getAllNodes,
+  getNode,
+  getNodeHistory,
+  pruneSnapshotNodes,
+  resetStore
+} = require("../server/nodeStore");
 const { pullOnce } = require("../server/upstreamPuller");
 
 test("upstream object map format should map key as fallback node id", () => {
@@ -164,4 +171,28 @@ test("getNode should normalize nodeId lookup", () => {
   const mixed = getNode(" a1B2 ");
   assert.equal(upper.nodeId, "a1b2");
   assert.equal(mixed.nodeId, "a1b2");
+});
+
+test("pruneSnapshotNodes should remove stale rest-only nodes", () => {
+  resetStore();
+  upsertNodeTelemetry({ temperature: 1 }, "test", { source: "rest", isSnapshot: true });
+  upsertNodeTelemetry({ temperature: 2 }, "dev01", { source: "rest", isSnapshot: true });
+  upsertNodeTelemetry({ temperature: 3 }, "9512", { source: "rest", isSnapshot: true });
+
+  pruneSnapshotNodes(new Set(["9512"]), "rest");
+
+  const ids = getAllNodes().map((x) => x.nodeId).sort();
+  assert.deepEqual(ids, ["9512"]);
+});
+
+test("pruneSnapshotNodes should keep nodes that also have mqtt source", () => {
+  resetStore();
+  upsertNodeTelemetry({ temperature: 1 }, "9512", { source: "mqtt" });
+  upsertNodeTelemetry({ temperature: 1 }, "9512", { source: "rest", isSnapshot: true });
+  upsertNodeTelemetry({ temperature: 1 }, "test", { source: "rest", isSnapshot: true });
+
+  pruneSnapshotNodes(new Set(), "rest");
+
+  const ids = getAllNodes().map((x) => x.nodeId).sort();
+  assert.deepEqual(ids, ["9512"]);
 });

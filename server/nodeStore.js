@@ -260,6 +260,26 @@ function getAllNodes() {
   return Array.from(nodeMap.values()).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+function pruneSnapshotNodes(snapshotNodeIds, snapshotSource = "rest") {
+  const keep = new Set(
+    Array.from(snapshotNodeIds || [])
+      .map((x) => normalizeStringId(x))
+      .filter(Boolean)
+  );
+  const src = normalizeSourceName(snapshotSource) || "rest";
+
+  for (const [nodeId, node] of nodeMap.entries()) {
+    if (keep.has(nodeId)) continue;
+
+    const sourceKeys = Object.keys(node.sourceLastSeenAt || {});
+    const onlySnapshotSource = sourceKeys.length === 1 && sourceKeys[0] === src;
+    if (!onlySnapshotSource) continue;
+
+    nodeMap.delete(nodeId);
+    nodeHistoryMap.delete(nodeId);
+  }
+}
+
 function getNode(nodeId) {
   const key = normalizeStringId(nodeId);
   return nodeMap.get(key);
@@ -280,6 +300,7 @@ function resetStore() {
 module.exports = {
   upsertNodeTelemetry,
   getAllNodes,
+  pruneSnapshotNodes,
   getNode,
   getNodeHistory,
   resetStore
