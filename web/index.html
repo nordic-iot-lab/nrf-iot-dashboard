@@ -611,8 +611,8 @@
         const hasCoapStream = keys.includes("coap") || keys.includes("coap-mqtt");
         // In this deployment, REST snapshot is sourced from coap.mecho.top/sensor (CoAP bridge view).
         const hasRestBridgeSnapshot = keys.includes("rest");
-        if (hasMqtt && (hasCoapStream || hasRestBridgeSnapshot)) return "COAP+MQTT";
-        if (hasCoapStream || hasRestBridgeSnapshot) return "COAP";
+        if (hasMqtt && (hasCoapStream || hasRestBridgeSnapshot)) return "COAP->MQTT";
+        if (hasCoapStream || hasRestBridgeSnapshot) return "COAP->MQTT";
         if (hasMqtt) return "MQTT";
         return String(item.lastSource || "unknown").toUpperCase();
       }
@@ -669,20 +669,15 @@
           const badgeClass = sev === "alert" ? "badge alert" : sev === "warn" ? "badge warn" : "badge";
           const badgeText = sev === "alert" ? "ALERT" : sev === "warn" ? "LOW BAT" : "NORMAL";
           const sourceMain = protocolBadge(item);
-          const snapshotSourceRaw = String(item.lastSnapshotSource || "rest").toUpperCase();
-          const snapshotSource = snapshotSourceRaw === "REST" ? "COAP-REST" : snapshotSourceRaw;
-          const snapshotBadge = snapshotSource ? `SNAP:${snapshotSource}` : "";
           card.innerHTML = `
             <div class="nodeTop">
               <div class="nodeId">${escapeHtml(item.nodeId)}</div>
               <div style="display:flex;gap:6px;align-items:center;">
                 <div class="badge">${escapeHtml(sourceMain)}</div>
-                ${snapshotBadge ? `<div class="badge">${escapeHtml(snapshotBadge)}</div>` : ""}
                 <div class="${badgeClass}">${badgeText}</div>
               </div>
             </div>
             <div class="time">data: ${escapeHtml(timeAgo(item.updatedAt))} | device seen: ${escapeHtml(timeAgo(item.lastDeviceSeenAt))} | snapshot seen: ${escapeHtml(timeAgo(item.lastSeenAt || item.updatedAt))}</div>
-            <div class="time">device source: ${escapeHtml(sourceMain)} | snapshot source: ${escapeHtml(snapshotSource)}</div>
             <div class="metrics">
               <div class="metric"><div class="mk">Temp</div><div class="mv">${fmtSafe(item.temperature, " C")}</div></div>
               <div class="metric"><div class="mk">Humidity</div><div class="mv">${fmtSafe(item.humidity, " %")}</div></div>
