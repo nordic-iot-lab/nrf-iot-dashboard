@@ -20,6 +20,7 @@ const config = {
   MQTT_USERNAME: process.env.MQTT_USERNAME || "",
   MQTT_PASSWORD: process.env.MQTT_PASSWORD || "",
   MQTT_CLIENT_ID: process.env.MQTT_CLIENT_ID || `nordic-web-dashboard-${Date.now()}`,
+  MQTT_ALLOW_INSECURE_TLS: process.env.MQTT_ALLOW_INSECURE_TLS === "true",
   COAP_ENABLED: process.env.COAP_ENABLED !== "false",
   COAP_HOST: process.env.COAP_HOST || "0.0.0.0",
   COAP_PORT: Number(process.env.COAP_PORT || 5683),

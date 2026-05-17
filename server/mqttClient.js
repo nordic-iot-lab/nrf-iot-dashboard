@@ -8,6 +8,7 @@ function startMqttIngest(config) {
     username: config.MQTT_USERNAME || undefined,
     password: config.MQTT_PASSWORD || undefined,
     clientId: config.MQTT_CLIENT_ID,
+    rejectUnauthorized: !config.MQTT_ALLOW_INSECURE_TLS,
     reconnectPeriod: 5000,
     connectTimeout: 4000
   });
