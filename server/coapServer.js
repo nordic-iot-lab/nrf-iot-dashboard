@@ -1,5 +1,6 @@
 const coap = require("coap");
 const { upsertNodeTelemetry } = require("./nodeStore");
+const { storeTelemetryMessage } = require("./telemetryStore");
 
 function getNodeIdFromPath(urlPath) {
   const parts = String(urlPath || "").split("/").filter(Boolean);
@@ -41,6 +42,14 @@ function startCoapIngest(config) {
 
     const fallbackNodeId = getNodeIdFromPath(pathName);
     const saved = upsertNodeTelemetry(payload, fallbackNodeId, { source: "coap" });
+    storeTelemetryMessage(config, {
+      nodeId: saved.nodeId,
+      topic: `coap:${pathName}`,
+      source: "coap",
+      payload
+    }).catch((err) => {
+      console.warn(`[pg] coap store failed: ${err.message}`);
+    });
 
     res.code = "2.04";
     res.end("ok");

@@ -196,6 +196,65 @@
         padding: 10px;
         cursor: pointer;
       }
+      .deviceCard {
+        border: 1px solid #395061;
+        border-radius: 10px;
+        background: rgba(10, 19, 25, 0.92);
+        padding: 10px;
+        display: grid;
+        gap: 8px;
+      }
+      .deviceHead {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .deviceMeta {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .variantGrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .variantCard {
+        border: 1px solid #304554;
+        border-radius: 8px;
+        background: rgba(20, 31, 40, 0.78);
+        padding: 9px;
+        cursor: pointer;
+      }
+      .variantCard.selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px rgba(70, 215, 217, 0.35);
+      }
+      .variantCard:hover {
+        border-color: var(--accent);
+      }
+      .variantTop {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+      .variantLabel {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 20px;
+        line-height: 1;
+      }
+      .variantMetrics {
+        margin-top: 8px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+      .variantGeo {
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--muted);
+      }
       .nodeCard:hover {
         border-color: var(--accent);
       }
@@ -235,6 +294,10 @@
         padding: 2px 8px;
         font-size: 11px;
         color: var(--muted);
+      }
+      .badge.ok {
+        border-color: rgba(99, 255, 159, 0.75);
+        color: var(--ok);
       }
       .badge.alert {
         border-color: rgba(255, 126, 131, 0.9);
@@ -361,6 +424,9 @@
         .historyBody {
           grid-template-columns: 1fr;
         }
+        .variantGrid {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
@@ -456,7 +522,17 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script>
+    <script type="module">
+      import {
+        protocolBadge,
+        encryptionBadge,
+        encryptionBadgeClass,
+        freshnessBadge,
+        freshnessBadgeClass,
+        recoveryBadge
+      } from "./dashboard-badges.mjs";
+      import { groupNodesByDevice, modeLabel } from "./dashboard-grouping.mjs";
+
       const grid = document.getElementById("grid");
       const empty = document.getElementById("empty");
       const filterInput = document.getElementById("filterInput");
@@ -605,18 +681,6 @@
         return "ok";
       }
 
-      function protocolBadge(item) {
-        const keys = Object.keys(item.sourceLastSeenAt || {}).map((x) => String(x || "").toLowerCase());
-        const hasMqtt = keys.includes("mqtt");
-        const hasCoapStream = keys.includes("coap") || keys.includes("coap-mqtt");
-        // In this deployment, REST snapshot is sourced from coap.mecho.top/sensor (CoAP bridge view).
-        const hasRestBridgeSnapshot = keys.includes("rest");
-        if (hasMqtt && (hasCoapStream || hasRestBridgeSnapshot)) return "COAP->MQTT";
-        if (hasCoapStream || hasRestBridgeSnapshot) return "COAP->MQTT";
-        if (hasMqtt) return "MQTT";
-        return String(item.lastSource || "unknown").toUpperCase();
-      }
-
       function drawKpis(items) {
         const gpsCount = items.filter((x) => isFiniteCoord(x.lat) && isFiniteCoord(x.lng)).length;
         const batt = avg(items, "battery");
@@ -653,52 +717,84 @@
           return bv - av;
         });
 
+        const groupedItems = groupNodesByDevice(items);
         drawKpis(items);
         grid.innerHTML = "";
-        if (!items.length) {
+        if (!groupedItems.length) {
           empty.style.display = "";
           drawMap(items);
           return;
         }
         empty.style.display = "none";
 
-        for (const item of items) {
-          const sev = nodeSeverity(item);
-          const card = document.createElement("article");
-          card.className = `nodeCard${selectedNodeId === item.nodeId ? " selected" : ""}${sev === "alert" ? " alert" : sev === "warn" ? " warn" : ""}`;
-          const badgeClass = sev === "alert" ? "badge alert" : sev === "warn" ? "badge warn" : "badge";
-          const badgeText = sev === "alert" ? "ALERT" : sev === "warn" ? "LOW BAT" : "NORMAL";
-          const sourceMain = protocolBadge(item);
-          card.innerHTML = `
-            <div class="nodeTop">
-              <div class="nodeId">${escapeHtml(item.nodeId)}</div>
-              <div style="display:flex;gap:6px;align-items:center;">
-                <div class="badge">${escapeHtml(sourceMain)}</div>
-                <div class="${badgeClass}">${badgeText}</div>
-              </div>
-            </div>
-            <div class="time">data: ${escapeHtml(timeAgo(item.updatedAt))} | device seen: ${escapeHtml(timeAgo(item.lastDeviceSeenAt))} | snapshot seen: ${escapeHtml(timeAgo(item.lastSeenAt || item.updatedAt))}</div>
-            <div class="metrics">
-              <div class="metric"><div class="mk">Temp</div><div class="mv">${fmtSafe(item.temperature, " C")}</div></div>
-              <div class="metric"><div class="mk">Humidity</div><div class="mv">${fmtSafe(item.humidity, " %")}</div></div>
-              <div class="metric"><div class="mk">Battery</div><div class="mv">${fmtSafe(item.battery)}</div></div>
-              <div class="metric"><div class="mk">Status</div><div class="mv">${fmtSafe(item.status)}</div></div>
-              <div class="metric"><div class="mk">Latitude</div><div class="mv">${fmtSafe(item.lat)}</div></div>
-              <div class="metric"><div class="mk">Longitude</div><div class="mv">${fmtSafe(item.lng)}</div></div>
-            </div>
+        for (const group of groupedItems) {
+          const deviceCard = document.createElement("article");
+          deviceCard.className = "deviceCard";
+          const latestVariant = group.variants[0];
+          const head = document.createElement("div");
+          head.className = "deviceHead";
+          head.innerHTML = `
+            <div class="nodeId">${escapeHtml(group.deviceId)}</div>
+            <div class="deviceMeta">4-way transport matrix · latest ${escapeHtml(timeAgo(group.updatedAt))}</div>
           `;
+          deviceCard.appendChild(head);
 
-          card.addEventListener("click", () => {
-            selectedNodeId = item.nodeId;
-            const marker = markerByNodeId.get(item.nodeId);
-            if (map && marker) {
-              map.setView(marker.getLatLng(), Math.max(11, map.getZoom()), { animate: true });
-              marker.openPopup();
-            }
-            loadHistory(item.nodeId);
-            draw();
-          });
-          grid.appendChild(card);
+          const variantGrid = document.createElement("div");
+          variantGrid.className = "variantGrid";
+
+          for (const item of group.variants) {
+            const sev = nodeSeverity(item);
+            const badgeClass = sev === "alert" ? "badge alert" : sev === "warn" ? "badge warn" : "badge";
+            const badgeText = sev === "alert" ? "ALERT" : sev === "warn" ? "LOW BAT" : "NORMAL";
+            const sourceMain = protocolBadge(item);
+            const encryptionMain = encryptionBadge(item);
+            const encryptionClass = encryptionBadgeClass(item);
+            const freshnessMain = freshnessBadge(item);
+            const freshnessClass = freshnessBadgeClass(item);
+            const recoveryMain = recoveryBadge(item);
+            const variant = document.createElement("div");
+            variant.className = `variantCard${selectedNodeId === item.nodeId ? " selected" : ""}`;
+            variant.innerHTML = `
+              <div class="variantTop">
+                <div class="variantLabel">${escapeHtml(modeLabel(item.nodeId))}</div>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+                  <div class="badge">${escapeHtml(sourceMain)}</div>
+                  <div class="${escapeHtml(encryptionClass)}">${escapeHtml(encryptionMain)}</div>
+                  <div class="${escapeHtml(freshnessClass)}">${escapeHtml(freshnessMain)}</div>
+                  ${recoveryMain ? `<div class="badge warn">${escapeHtml(recoveryMain)}</div>` : ""}
+                  <div class="${badgeClass}">${badgeText}</div>
+                </div>
+              </div>
+              <div class="time">data: ${escapeHtml(timeAgo(item.updatedAt))} | seen: ${escapeHtml(timeAgo(item.lastDeviceSeenAt))}</div>
+              <div class="variantMetrics">
+                <div class="metric"><div class="mk">Temp</div><div class="mv">${fmtSafe(item.temperature, " C")}</div></div>
+                <div class="metric"><div class="mk">Humidity</div><div class="mv">${fmtSafe(item.humidity, " %")}</div></div>
+                <div class="metric"><div class="mk">Battery</div><div class="mv">${fmtSafe(item.battery)}</div></div>
+                <div class="metric"><div class="mk">Status</div><div class="mv">${fmtSafe(item.status)}</div></div>
+              </div>
+              <div class="variantGeo">GPS: ${fmtSafe(item.lat)} , ${fmtSafe(item.lng)}</div>
+            `;
+            variant.addEventListener("click", () => {
+              selectedNodeId = item.nodeId;
+              const marker = markerByNodeId.get(item.nodeId) || markerByNodeId.get(group.deviceId);
+              if (map && marker) {
+                map.setView(marker.getLatLng(), Math.max(11, map.getZoom()), { animate: true });
+                marker.openPopup();
+              }
+              loadHistory(item.nodeId);
+              draw();
+            });
+            variantGrid.appendChild(variant);
+          }
+
+          deviceCard.appendChild(variantGrid);
+          if (latestVariant) {
+            const foot = document.createElement("div");
+            foot.className = "time";
+            foot.textContent = `device: ${group.deviceId} | last location ${fmt(latestVariant.lat)} , ${fmt(latestVariant.lng)} | click a mode card for history`;
+            deviceCard.appendChild(foot);
+          }
+          grid.appendChild(deviceCard);
         }
 
         drawMap(items);

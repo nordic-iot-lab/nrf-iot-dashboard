@@ -1,7 +1,25 @@
 const mqtt = require("mqtt");
+const fs = require("fs");
 const { upsertNodeTelemetry } = require("./nodeStore");
 const { parseNodeIdFromTopic } = require("./topicParser");
 const { detectMqttLogicalSource } = require("./sourceClassifier");
+const { storeTelemetryMessage } = require("./telemetryStore");
+
+function buildTlsOptions(config) {
+  const options = {};
+  const caPath = String(config.MQTT_CA_CERT_PATH || "").trim();
+  if (!caPath) {
+    return options;
+  }
+
+  try {
+    options.ca = fs.readFileSync(caPath, "utf8");
+    console.log(`[mqtt] loaded CA cert: ${caPath}`);
+  } catch (err) {
+    console.warn(`[mqtt] failed to load CA cert ${caPath}: ${err.message}`);
+  }
+  return options;
+}
 
 function startMqttIngest(config) {
   const client = mqtt.connect(config.MQTT_BROKER_URL, {
@@ -10,7 +28,8 @@ function startMqttIngest(config) {
     clientId: config.MQTT_CLIENT_ID,
     rejectUnauthorized: !config.MQTT_ALLOW_INSECURE_TLS,
     reconnectPeriod: 5000,
-    connectTimeout: 4000
+    connectTimeout: 4000,
+    ...buildTlsOptions(config)
   });
 
   client.on("connect", () => {
@@ -37,6 +56,14 @@ function startMqttIngest(config) {
     const topicNodeId = parseNodeIdFromTopic(topic);
     const logicalSource = detectMqttLogicalSource(payload, packet);
     const saved = upsertNodeTelemetry(payload, topicNodeId, { source: logicalSource });
+    storeTelemetryMessage(config, {
+      nodeId: saved.nodeId,
+      topic,
+      source: logicalSource,
+      payload
+    }).catch((err) => {
+      console.warn(`[pg] mqtt store failed: ${err.message}`);
+    });
     console.log(`[mqtt] node=${saved.nodeId} temp=${saved.temperature} hum=${saved.humidity} battery=${saved.battery}`);
   });
 

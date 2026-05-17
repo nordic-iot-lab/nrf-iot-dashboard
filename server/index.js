@@ -3,9 +3,16 @@ const express = require("express");
 const dotenv = require("dotenv");
 const { startMqttIngest } = require("./mqttClient");
 const { startCoapIngest } = require("./coapServer");
-const { upsertNodeTelemetry, getAllNodes, getNode, getNodeHistory } = require("./nodeStore");
+const {
+  upsertNodeTelemetry,
+  getAllNodes,
+  getNode,
+  getNodeHistory,
+  buildSensorSnapshotMap
+} = require("./nodeStore");
 const { startUpstreamPuller, pullOnce } = require("./upstreamPuller");
 const { createHistoryStore, normalizeLimit } = require("./historyStore");
+const { ensureSchema, storeTelemetryMessage, loadLatestTelemetry } = require("./telemetryStore");
 
 dotenv.config();
 
@@ -21,6 +28,7 @@ const config = {
   MQTT_PASSWORD: process.env.MQTT_PASSWORD || "",
   MQTT_CLIENT_ID: process.env.MQTT_CLIENT_ID || `nordic-web-dashboard-${Date.now()}`,
   MQTT_ALLOW_INSECURE_TLS: process.env.MQTT_ALLOW_INSECURE_TLS === "true",
+  MQTT_CA_CERT_PATH: process.env.MQTT_CA_CERT_PATH || "",
   COAP_ENABLED: process.env.COAP_ENABLED !== "false",
   COAP_HOST: process.env.COAP_HOST || "0.0.0.0",
   COAP_PORT: Number(process.env.COAP_PORT || 5683),
@@ -60,6 +68,27 @@ if (!String(config.API_WRITE_TOKEN || "").trim()) {
   console.warn("[auth] API_WRITE_TOKEN is not set - write endpoints are disabled");
 }
 
+async function restoreLatestNodes() {
+  try {
+    await ensureSchema(config);
+    const items = await loadLatestTelemetry(config);
+    for (const item of items) {
+      upsertNodeTelemetry(item.payload || {}, item.nodeId, {
+        source: item.source,
+        observedAt: Date.parse(item.receivedAt) || Date.now(),
+        restoredFromStorage: true
+      });
+    }
+    if (items.length) {
+      console.log(`[pg] restored ${items.length} node(s) from telemetry store`);
+    }
+  } catch (err) {
+    console.warn(`[pg] telemetry store init failed: ${err.message}`);
+  }
+}
+
+restoreLatestNodes();
+
 startMqttIngest(config);
 startCoapIngest(config);
 startUpstreamPuller(config);
@@ -80,6 +109,10 @@ app.get("/api/nodes/:nodeId", (req, res) => {
     return;
   }
   res.json(found);
+});
+
+app.get("/sensor", (_req, res) => {
+  res.json(buildSensorSnapshotMap());
 });
 
 app.get("/api/nodes/:nodeId/history", async (req, res) => {
@@ -113,6 +146,15 @@ app.get("/api/nodes/:nodeId/history", async (req, res) => {
 app.post("/api/ingest", requireWriteToken, (req, res) => {
   const saved = upsertNodeTelemetry(req.body || {}, req.body?.nodeId, { source: "api" });
   res.json({ ok: true, item: saved });
+});
+
+app.post("/api/internal/store", requireWriteToken, async (req, res) => {
+  try {
+    await storeTelemetryMessage(config, req.body || {});
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "store_failed", reason: err.message });
+  }
 });
 
 app.post("/api/pull-once", requireWriteToken, async (_req, res) => {

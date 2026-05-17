@@ -35,6 +35,7 @@ function buildNodeRecord(row, nodeId) {
     temperature: temp,
     humidity: hum,
     battery,
+    source: row.source || null,
     raw: payload
   };
 }
@@ -110,21 +111,49 @@ function createHistoryStore(config) {
     isEnabled: () => true,
     getHistory: async (nodeId, limit) => {
       const safeLimit = normalizeLimit(limit, 100);
-      const topic = topicForNodeIdByTemplate(nodeId, topicTemplate);
-      const sql = `
-        SELECT topic, payload, "timestamp"
-        FROM mqtt_messages
-        WHERE topic = $1
-        ORDER BY "timestamp" DESC
-        LIMIT $2
-      `;
+      const normalizedNodeId = String(nodeId || "")
+        .trim()
+        .toLowerCase();
+      const topic = topicForNodeIdByTemplate(normalizedNodeId, topicTemplate);
+      const statements = [
+        {
+          text: `
+            SELECT topic, payload, source, received_at AS timestamp
+            FROM telemetry_messages
+            WHERE node_id = $1
+            ORDER BY received_at DESC
+            LIMIT $2
+          `,
+          values: [normalizedNodeId, safeLimit]
+        },
+        {
+          text: `
+            SELECT topic, payload, NULL::text AS source, "timestamp"
+            FROM mqtt_messages
+            WHERE topic = $1
+            ORDER BY "timestamp" DESC
+            LIMIT $2
+          `,
+          values: [topic, safeLimit]
+        }
+      ];
 
-      const result = await pool.query({
-        text: sql,
-        values: [topic, safeLimit],
-        statement_timeout: Number(config.PG_QUERY_TIMEOUT_MS || 4000)
-      });
-      return result.rows.map((row) => buildNodeRecord(row, nodeId));
+      for (const statement of statements) {
+        try {
+          const result = await pool.query({
+            text: statement.text,
+            values: statement.values,
+            statement_timeout: Number(config.PG_QUERY_TIMEOUT_MS || 4000)
+          });
+          return result.rows.map((row) => buildNodeRecord(row, normalizedNodeId));
+        } catch (err) {
+          if (!String(err.message || "").includes("does not exist")) {
+            throw err;
+          }
+        }
+      }
+
+      return [];
     }
   };
 }

@@ -29,9 +29,10 @@ Data flow: nRF -> CoAP/MQTT -> your server/broker -> this dashboard backend -> w
 
 This project now supports your current production endpoints directly:
 
-- REST latest snapshot: `https://coap.mecho.top/sensor`
-- MQTT WebSocket: `wss://mqtt.mecho.top/mqtt`
+- Web panel: `https://nrf.mecho.top`
+- MQTT backend ingest: `mqtts://mqtt.mecho.top:8883`
 - MQTT topic: `sensor/+/data`
+- Optional REST snapshot compatibility: `GET https://coap.mecho.top/sensor`
 
 `GET /sensor` object-map responses are supported, for example:
 
@@ -103,7 +104,7 @@ Stop:
 docker compose down
 ```
 
-If you want this app to pull from your server:
+If you want this app to pull from your server, set `UPSTREAM_PULL_URL`. In the EMQX-centered deployment, leave it empty:
 
 ```env
 UPSTREAM_PULL_URL=https://your-server.example.com/api/nrf/latest
@@ -111,10 +112,18 @@ UPSTREAM_PULL_INTERVAL_MS=8000
 UPSTREAM_AUTH_TOKEN=your_token_if_needed
 ```
 
-CoAP is enabled by default. You can tune it:
+If your broker uses a private CA, point the backend subscriber at that CA file:
 
 ```env
-COAP_ENABLED=true
+MQTT_BROKER_URL=mqtts://mqtt.mecho.top:8883
+MQTT_CA_CERT_PATH=/app/certs/ca.pem
+MQTT_ALLOW_INSECURE_TLS=false
+```
+
+When EMQX is your single ingress, keep direct CoAP ingest disabled in the panel service:
+
+```env
+COAP_ENABLED=false
 COAP_HOST=0.0.0.0
 COAP_PORT=5683
 ```

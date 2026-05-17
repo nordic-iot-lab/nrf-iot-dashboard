@@ -6,6 +6,7 @@ const {
   getAllNodes,
   getNode,
   getNodeHistory,
+  buildSensorSnapshotMap,
   pruneSnapshotNodes,
   resetStore
 } = require("../server/nodeStore");
@@ -25,6 +26,22 @@ test("upstream object map format should map key as fallback node id", () => {
 test("zero coordinates should be treated as missing gps", () => {
   resetStore();
   const row = upsertNodeTelemetry({ mac_last4: "9512", lat: 0, lng: 0 }, "9512", { source: "mqtt" });
+  assert.equal(row.lat, null);
+  assert.equal(row.lng, null);
+});
+
+test("explicit zero gps should clear stale coordinates", () => {
+  resetStore();
+  upsertNodeTelemetry(
+    { mac_last4: "9512", lat: 31.2304, lng: 121.4737 },
+    "9512",
+    { source: "mqtt" }
+  );
+
+  const row = upsertNodeTelemetry({ mac_last4: "9512", lat: 0, lng: 0 }, "9512", {
+    source: "mqtt"
+  });
+
   assert.equal(row.lat, null);
   assert.equal(row.lng, null);
 });
@@ -99,6 +116,34 @@ test("mqtt and coap sources should bump device seen time", async () => {
   const second = upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 10 }, "a1b2", { source: "coap-mqtt" });
 
   assert.ok(second.lastDeviceSeenAt >= first.lastDeviceSeenAt);
+});
+
+test("firmware mode-specific node ids should render as separate cards", () => {
+  resetStore();
+  upsertNodeTelemetry({ nodeId: "9512-mqtt-tls", temperature: 29, encrypted: true }, "9512-mqtt-tls", {
+    source: "mqtt"
+  });
+  upsertNodeTelemetry({ nodeId: "9512-mqtt-plain", temperature: 29, encrypted: false }, "9512-mqtt-plain", {
+    source: "mqtt"
+  });
+  upsertNodeTelemetry({ nodeId: "9512-coap-dtls", temperature: 29, encrypted: true }, "9512-coap-dtls", {
+    source: "coap"
+  });
+  upsertNodeTelemetry({ nodeId: "9512-coap-plain", temperature: 29, encrypted: false }, "9512-coap-plain", {
+    source: "coap"
+  });
+
+  const ids = getAllNodes()
+    .map((item) => item.nodeId)
+    .sort();
+
+  assert.deepEqual(ids, ["9512-coap-dtls", "9512-coap-plain", "9512-mqtt-plain", "9512-mqtt-tls"]);
+});
+
+test("sensor topic parser should preserve mode-specific node ids", () => {
+  const { parseNodeIdFromTopic } = require("../server/topicParser");
+  assert.equal(parseNodeIdFromTopic("sensor/9512-mqtt-tls/data"), "9512-mqtt-tls");
+  assert.equal(parseNodeIdFromTopic("sensor/9512-coap-dtls/data"), "9512-coap-dtls");
 });
 
 test("in-memory node history should keep recent samples", async () => {
@@ -195,4 +240,43 @@ test("pruneSnapshotNodes should keep nodes that also have mqtt source", () => {
 
   const ids = getAllNodes().map((x) => x.nodeId).sort();
   assert.deepEqual(ids, ["9512"]);
+});
+
+test("sensor snapshot map should expose latest node data keyed by node id", () => {
+  resetStore();
+  upsertNodeTelemetry(
+    {
+      mac_last4: "9512",
+      temp_c: 32,
+      humidity: 55,
+      battery_pct: 87,
+      lat: 31.23,
+      lng: 121.47
+    },
+    "9512",
+    { source: "mqtt" }
+  );
+
+  const snapshot = buildSensorSnapshotMap();
+  assert.deepEqual(snapshot["9512"], {
+    nodeId: "9512",
+    temperature: 32,
+    humidity: 55,
+    battery: 87,
+    rssi: null,
+    voltage: null,
+    co2: null,
+    pm25: null,
+    status: null,
+    events: null,
+    urgent: null,
+    vibration_mg: null,
+    tilt_deg: null,
+    lat: 31.23,
+    lng: 121.47,
+    source: "mqtt",
+    updatedAt: snapshot["9512"].updatedAt,
+    lastSeenAt: snapshot["9512"].lastSeenAt,
+    lastDeviceSeenAt: snapshot["9512"].lastDeviceSeenAt
+  });
 });

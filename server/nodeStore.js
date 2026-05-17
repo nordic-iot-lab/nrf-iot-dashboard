@@ -69,53 +69,92 @@ function sanitizeLng(value) {
   return n;
 }
 
-function extractCoordinates(payload) {
-  const gps = payload.gps || {};
-  const location = payload.location || {};
-  const position = payload.position || {};
+function readPath(payload, path) {
+  let current = payload;
 
-  let lat = sanitizeLat(
-    payload.lat ??
-      payload.latitude ??
-      payload.gps_lat ??
-      payload.gpsLat ??
-      gps.lat ??
-      gps.latitude ??
-      location.lat ??
-      location.latitude ??
-      position.lat ??
-      position.latitude
-  );
+  for (const segment of path) {
+    if (
+      current === null ||
+      current === undefined ||
+      typeof current !== "object" ||
+      !Object.prototype.hasOwnProperty.call(current, segment)
+    ) {
+      return { found: false, value: undefined };
+    }
+    current = current[segment];
+  }
 
-  let lng = sanitizeLng(
-    payload.lng ??
-      payload.lon ??
-      payload.longitude ??
-      payload.gps_lng ??
-      payload.gps_lon ??
-      payload.gpsLon ??
-      payload.gpsLng ??
-      gps.lng ??
-      gps.lon ??
-      gps.longitude ??
-      location.lng ??
-      location.lon ??
-      location.longitude ??
-      position.lng ??
-      position.lon ??
-      position.longitude
-  );
+  return { found: true, value: current };
+}
 
-  // Support a compact "gps": "lat,lng" string format.
-  if ((lat === null || lng === null) && typeof payload.gps === "string") {
-    const parts = payload.gps.split(",").map((x) => x.trim());
-    if (parts.length >= 2) {
-      lat = lat === null ? sanitizeLat(parts[0]) : lat;
-      lng = lng === null ? sanitizeLng(parts[1]) : lng;
+function pickCoordinate(payload, candidates, sanitizer) {
+  for (const path of candidates) {
+    const { found, value } = readPath(payload, path);
+    if (found) {
+      return {
+        provided: true,
+        value: sanitizer(value)
+      };
     }
   }
 
-  return { lat, lng };
+  return { provided: false, value: null };
+}
+
+function extractCoordinates(payload) {
+  const latCandidates = [
+    ["lat"],
+    ["latitude"],
+    ["gps_lat"],
+    ["gpsLat"],
+    ["gps", "lat"],
+    ["gps", "latitude"],
+    ["location", "lat"],
+    ["location", "latitude"],
+    ["position", "lat"],
+    ["position", "latitude"]
+  ];
+  const lngCandidates = [
+    ["lng"],
+    ["lon"],
+    ["longitude"],
+    ["gps_lng"],
+    ["gps_lon"],
+    ["gpsLon"],
+    ["gpsLng"],
+    ["gps", "lng"],
+    ["gps", "lon"],
+    ["gps", "longitude"],
+    ["location", "lng"],
+    ["location", "lon"],
+    ["location", "longitude"],
+    ["position", "lng"],
+    ["position", "lon"],
+    ["position", "longitude"]
+  ];
+
+  let lat = pickCoordinate(payload, latCandidates, sanitizeLat);
+  let lng = pickCoordinate(payload, lngCandidates, sanitizeLng);
+
+  // Support a compact "gps": "lat,lng" string format.
+  if ((!lat.provided || !lng.provided) && typeof payload.gps === "string") {
+    const parts = payload.gps.split(",").map((x) => x.trim());
+    if (parts.length >= 2) {
+      if (!lat.provided) {
+        lat = { provided: true, value: sanitizeLat(parts[0]) };
+      }
+      if (!lng.provided) {
+        lng = { provided: true, value: sanitizeLng(parts[1]) };
+      }
+    }
+  }
+
+  return {
+    lat: lat.value,
+    lng: lng.value,
+    latProvided: lat.provided,
+    lngProvided: lng.provided
+  };
 }
 
 function resolveNodeId(payload, fallbackNodeId) {
@@ -138,25 +177,33 @@ function resolveNodeId(payload, fallbackNodeId) {
 }
 
 function normalizePayload(payload, fallbackNodeId) {
+  const sourcePayload = payload && typeof payload === "object" ? payload : {};
   const nodeId = resolveNodeId(payload, fallbackNodeId);
-  const { lat, lng } = extractCoordinates(payload);
+  const { lat, lng, latProvided, lngProvided } = extractCoordinates(sourcePayload);
   return {
     nodeId,
-    temperature: payload.temperature ?? payload.temp ?? payload.temp_c ?? payload.tempC ?? null,
-    humidity: payload.humidity ?? payload.humi ?? payload.hum ?? null,
-    battery: payload.battery ?? payload.battery_mv ?? payload.battery_pct ?? payload.batteryPercent ?? null,
-    rssi: payload.rssi ?? payload.signal_dbm ?? null,
-    voltage: payload.voltage ?? payload.vbat ?? payload.vbat_v ?? null,
-    co2: payload.co2 ?? null,
-    pm25: payload.pm25 ?? null,
-    status: payload.status ?? payload.state ?? null,
-    events: payload.events ?? null,
-    urgent: payload.urgent ?? null,
-    vibrationMg: payload.vibration_mg ?? payload.vibrationMg ?? null,
-    tiltDeg: payload.tilt_deg ?? payload.tiltDeg ?? null,
+    temperature: sourcePayload.temperature ?? sourcePayload.temp ?? sourcePayload.temp_c ?? sourcePayload.tempC ?? null,
+    humidity: sourcePayload.humidity ?? sourcePayload.humi ?? sourcePayload.hum ?? null,
+    battery:
+      sourcePayload.battery ??
+      sourcePayload.battery_mv ??
+      sourcePayload.battery_pct ??
+      sourcePayload.batteryPercent ??
+      null,
+    rssi: sourcePayload.rssi ?? sourcePayload.signal_dbm ?? null,
+    voltage: sourcePayload.voltage ?? sourcePayload.vbat ?? sourcePayload.vbat_v ?? null,
+    co2: sourcePayload.co2 ?? null,
+    pm25: sourcePayload.pm25 ?? null,
+    status: sourcePayload.status ?? sourcePayload.state ?? null,
+    events: sourcePayload.events ?? null,
+    urgent: sourcePayload.urgent ?? null,
+    vibrationMg: sourcePayload.vibration_mg ?? sourcePayload.vibrationMg ?? null,
+    tiltDeg: sourcePayload.tilt_deg ?? sourcePayload.tiltDeg ?? null,
     lat,
     lng,
-    raw: payload
+    raw: sourcePayload,
+    latProvided,
+    lngProvided
   };
 }
 
@@ -202,20 +249,28 @@ function trimRawPayload(raw, maxBytes) {
 function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
   const source = options.source || "unknown";
   const isSnapshot = options.isSnapshot === true;
+  const restoredFromStorage = options.restoredFromStorage === true;
   const normalizedSource = normalizeSourceName(source) || "unknown";
   const normalized = normalizePayload(payload, fallbackNodeId);
   const prev = nodeMap.get(normalized.nodeId) || {};
-  const now = Date.now();
+  const observedAt = Number(options.observedAt);
+  const now = Number.isFinite(observedAt) && observedAt > 0 ? observedAt : Date.now();
+  const { latProvided, lngProvided, ...normalizedTelemetry } = normalized;
   const merged = {
     ...prev,
-    ...normalized
+    ...normalizedTelemetry
   };
 
-  // Keep last known position if this packet doesn't include GPS.
-  if (normalized.lat === null && prev.lat !== undefined) {
+  // Keep last known position only when GPS fields are absent.
+  // Explicit 0/invalid coordinates clear stale location instead of reusing it.
+  if (latProvided) {
+    merged.lat = normalized.lat;
+  } else if (prev.lat !== undefined) {
     merged.lat = prev.lat;
   }
-  if (normalized.lng === null && prev.lng !== undefined) {
+  if (lngProvided) {
+    merged.lng = normalized.lng;
+  } else if (prev.lng !== undefined) {
     merged.lng = prev.lng;
   }
 
@@ -227,6 +282,7 @@ function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
   merged.updatedAt = changed ? now : prev.updatedAt || now;
   merged.lastSource = isDeviceSource ? normalizedSource : prev.lastSource || "unknown";
   merged.lastSnapshotSource = isSnapshot ? normalizedSource : prev.lastSnapshotSource || null;
+  merged.restoredFromStorage = isDeviceSource && !restoredFromStorage ? false : prev.restoredFromStorage || restoredFromStorage;
 
   const sourceUpdatedAt = { ...(prev.sourceUpdatedAt || {}) };
   const prevSourceRaw = prev.sourceRaw && prev.sourceRaw[normalizedSource] ? prev.sourceRaw[normalizedSource] : null;
@@ -258,6 +314,39 @@ function upsertNodeTelemetry(payload, fallbackNodeId, options = {}) {
 
 function getAllNodes() {
   return Array.from(nodeMap.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+function buildSensorSnapshotMap() {
+  const out = {};
+  for (const item of getAllNodes()) {
+    const source =
+      String(item.lastSource || "").trim().toLowerCase() ||
+      String(item.lastSnapshotSource || "").trim().toLowerCase() ||
+      "unknown";
+
+    out[item.nodeId] = {
+      nodeId: item.nodeId,
+      temperature: item.temperature ?? null,
+      humidity: item.humidity ?? null,
+      battery: item.battery ?? null,
+      rssi: item.rssi ?? null,
+      voltage: item.voltage ?? null,
+      co2: item.co2 ?? null,
+      pm25: item.pm25 ?? null,
+      status: item.status ?? null,
+      events: item.events ?? null,
+      urgent: item.urgent ?? null,
+      vibration_mg: item.vibrationMg ?? null,
+      tilt_deg: item.tiltDeg ?? null,
+      lat: item.lat ?? null,
+      lng: item.lng ?? null,
+      source,
+      updatedAt: item.updatedAt ?? null,
+      lastSeenAt: item.lastSeenAt ?? null,
+      lastDeviceSeenAt: item.lastDeviceSeenAt ?? null
+    };
+  }
+  return out;
 }
 
 function pruneSnapshotNodes(snapshotNodeIds, snapshotSource = "rest") {
@@ -300,6 +389,7 @@ function resetStore() {
 module.exports = {
   upsertNodeTelemetry,
   getAllNodes,
+  buildSensorSnapshotMap,
   pruneSnapshotNodes,
   getNode,
   getNodeHistory,

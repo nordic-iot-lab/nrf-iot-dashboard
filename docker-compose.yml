@@ -1,11 +1,35 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nordic-web-postgres
+    environment:
+      POSTGRES_DB: ${PG_DATABASE:-nordic}
+      POSTGRES_USER: ${PG_USER:-nordic}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-change_me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-nordic} -d ${PG_DATABASE:-nordic}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   nordic-web-dashboard:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: nordic-web-dashboard
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
-      - "8080:8080"
+      - "127.0.0.1:18080:8080"
     env_file:
       - .env
+    volumes:
+      - ./certs:/app/certs:ro
     restart: unless-stopped
+
+volumes:
+  postgres_data:
