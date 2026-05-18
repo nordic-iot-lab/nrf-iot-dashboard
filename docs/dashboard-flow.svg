@@ -1,49 +1,256 @@
-<svg width="1100" height="520" viewBox="0 0 1100 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">nRF dashboard data flow</title>
-  <desc id="desc">MQTT, CoAP, HTTP ingest, and REST pull data are normalized into node snapshots, history, GPS map markers, and dashboard cards.</desc>
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1100" y2="520" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#11352F"/>
-      <stop offset="1" stop-color="#E19A38"/>
-    </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#00131A" flood-opacity="0.24"/>
-    </filter>
-    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-      <path d="M2 2L10 6L2 10" stroke="#F7C948" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </marker>
-  </defs>
-  <rect width="1100" height="520" rx="28" fill="url(#bg)"/>
-  <text x="60" y="72" fill="#FFFFFF" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="36" font-weight="800">nRF IoT Dashboard</text>
-  <text x="62" y="108" fill="#EFF9E8" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="18">Unified visibility for MQTT, CoAP, REST, history, and GNSS location</text>
-  <g filter="url(#shadow)">
-    <rect x="62" y="164" width="240" height="244" rx="24" fill="#F9FFFB"/>
-    <text x="96" y="215" fill="#173A33" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="800">Inputs</text>
-    <text x="96" y="257" fill="#41635D" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">MQTT subscriber</text>
-    <text x="96" y="286" fill="#41635D" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">CoAP receiver</text>
-    <text x="96" y="315" fill="#41635D" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">HTTP ingest</text>
-    <text x="96" y="344" fill="#41635D" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">REST puller</text>
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="550.08pt" height="252.792pt" viewBox="0 0 550.08 252.792" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-05-18T11:57:05.583319</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.9.4, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 252.792
+L 550.08 252.792
+L 550.08 0
+L 0 0
+z
+" style="fill: #ffffff"/>
   </g>
-  <g filter="url(#shadow)">
-    <rect x="430" y="164" width="240" height="244" rx="24" fill="#F9FFFB"/>
-    <text x="464" y="215" fill="#173A33" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="800">Normalizer</text>
-    <text x="464" y="257" fill="#41635D" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">nodeId aliases</text>
-    <text x="464" y="286" fill="#41635D" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">temperature aliases</text>
-    <text x="464" y="315" fill="#41635D" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">battery aliases</text>
-    <text x="464" y="344" fill="#41635D" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">GPS aliases</text>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 38.26944 176.935104
+L 147.54816 176.935104
+Q 163.61856 176.935104 163.61856 169.783344
+L 163.61856 94.928256
+Q 163.61856 87.776496 147.54816 87.776496
+L 38.26944 87.776496
+Q 22.19904 87.776496 22.19904 94.928256
+L 22.19904 169.783344
+Q 22.19904 176.935104 38.26944 176.935104
+z
+" clip-path="url(#p647725a0fe)" style="fill: #d8f0f1; stroke: #2f8f9d; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 215.04384 176.935104
+L 324.32256 176.935104
+Q 340.39296 176.935104 340.39296 169.783344
+L 340.39296 94.928256
+Q 340.39296 87.776496 324.32256 87.776496
+L 215.04384 87.776496
+Q 198.97344 87.776496 198.97344 94.928256
+L 198.97344 169.783344
+Q 198.97344 176.935104 215.04384 176.935104
+z
+" clip-path="url(#p647725a0fe)" style="fill: #f9e4bc; stroke: #e8a23a; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 391.81824 176.935104
+L 501.09696 176.935104
+Q 517.16736 176.935104 517.16736 169.783344
+L 517.16736 94.928256
+Q 517.16736 87.776496 501.09696 87.776496
+L 391.81824 87.776496
+Q 375.74784 87.776496 375.74784 94.928256
+L 375.74784 169.783344
+Q 375.74784 176.935104 391.81824 176.935104
+z
+" clip-path="url(#p647725a0fe)" style="fill: #dceee2; stroke: #4f9b6e; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 165.54536 131.16384
+Q 181.293731 131.16384 195.029641 131.16384
+" clip-path="url(#p647725a0fe)" style="fill: none; stroke: #e8a23a; stroke-width: 1.8; stroke-linecap: round"/>
+    <path d="M 190.229641 128.76384
+L 195.029641 131.16384
+L 190.229641 133.56384
+z
+" clip-path="url(#p647725a0fe)" style="fill: #e8a23a; stroke: #e8a23a; stroke-width: 1.8; stroke-linecap: round"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 342.31976 131.16384
+Q 358.068131 131.16384 371.804041 131.16384
+" clip-path="url(#p647725a0fe)" style="fill: none; stroke: #e8a23a; stroke-width: 1.8; stroke-linecap: round"/>
+    <path d="M 367.004041 128.76384
+L 371.804041 131.16384
+L 367.004041 133.56384
+z
+" clip-path="url(#p647725a0fe)" style="fill: #e8a23a; stroke: #e8a23a; stroke-width: 1.8; stroke-linecap: round"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 435.744 70.37388
+C 440.00592 70.37388 444.093856 69.620325 447.107489 68.279178
+C 450.121121 66.938031 451.8144 65.118789 451.8144 63.22212
+C 451.8144 61.325451 450.121121 59.506209 447.107489 58.165062
+C 444.093856 56.823915 440.00592 56.07036 435.744 56.07036
+C 431.48208 56.07036 427.394144 56.823915 424.380511 58.165062
+C 421.366879 59.506209 419.6736 61.325451 419.6736 63.22212
+C 419.6736 65.118789 421.366879 66.938031 424.380511 68.279178
+C 427.394144 69.620325 431.48208 70.37388 435.744 70.37388
+z
+" clip-path="url(#p647725a0fe)" style="fill: #4f9b6e; stroke: #ffffff; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 80.05248 210.786768
+L 131.47776 210.786768
+Q 141.12 210.786768 141.12 206.495712
+L 141.12 199.10556
+Q 141.12 194.814504 131.47776 194.814504
+L 80.05248 194.814504
+Q 70.41024 194.814504 70.41024 199.10556
+L 70.41024 206.495712
+Q 70.41024 210.786768 80.05248 210.786768
+z
+" clip-path="url(#p647725a0fe)" style="fill: #d8f0f1; stroke: #12606b; stroke-width: 0.8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 155.04768 210.786768
+L 196.83072 210.786768
+Q 206.47296 210.786768 206.47296 206.495712
+L 206.47296 199.10556
+Q 206.47296 194.814504 196.83072 194.814504
+L 155.04768 194.814504
+Q 145.40544 194.814504 145.40544 199.10556
+L 145.40544 206.495712
+Q 145.40544 210.786768 155.04768 210.786768
+z
+" clip-path="url(#p647725a0fe)" style="fill: #f9e4bc; stroke: #e8a23a; stroke-width: 0.8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 235.39968 210.786768
+L 286.82496 210.786768
+Q 296.4672 210.786768 296.4672 206.495712
+L 296.4672 199.10556
+Q 296.4672 194.814504 286.82496 194.814504
+L 235.39968 194.814504
+Q 225.75744 194.814504 225.75744 199.10556
+L 225.75744 206.495712
+Q 225.75744 210.786768 235.39968 210.786768
+z
+" clip-path="url(#p647725a0fe)" style="fill: #dce7f6; stroke: #315f9d; stroke-width: 0.8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 315.75168 210.786768
+L 367.17696 210.786768
+Q 376.8192 210.786768 376.8192 206.495712
+L 376.8192 199.10556
+Q 376.8192 194.814504 367.17696 194.814504
+L 315.75168 194.814504
+Q 306.10944 194.814504 306.10944 199.10556
+L 306.10944 206.495712
+Q 306.10944 210.786768 315.75168 210.786768
+z
+" clip-path="url(#p647725a0fe)" style="fill: #f5d9dc; stroke: #c95f66; stroke-width: 0.8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 401.46048 210.786768
+L 443.24352 210.786768
+Q 452.88576 210.786768 452.88576 206.495712
+L 452.88576 199.10556
+Q 452.88576 194.814504 443.24352 194.814504
+L 401.46048 194.814504
+Q 391.81824 194.814504 391.81824 199.10556
+L 391.81824 206.495712
+Q 391.81824 210.786768 401.46048 210.786768
+z
+" clip-path="url(#p647725a0fe)" style="fill: #dceee2; stroke: #4f9b6e; stroke-width: 0.8; stroke-linejoin: miter"/>
+   </g>
+   <g id="line2d_1">
+    <path d="M 403.6032 78.7176
+L 489.312 78.7176
+L 489.312 45.34272
+L 403.6032 45.34272
+L 403.6032 78.7176
+" clip-path="url(#p647725a0fe)" style="fill: none; stroke: #b9c3cc; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_2">
+    <path d="M 435.744 63.22212
+L 457.1712 54.8784
+L 478.5984 70.37388
+" clip-path="url(#p647725a0fe)" style="fill: none; stroke: #4f9b6e; stroke-width: 1.5; stroke-linecap: square"/>
+   </g>
+   <g id="text_1">
+    <text style="fill: #1f2933; font: 700 18px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: start" x="28.6272" y="34.387583" transform="rotate(-0 28.6272 34.387583)">nRF IoT Dashboard</text>
+   </g>
+   <g id="text_2">
+    <text style="fill: #64707d; font: 8.5px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: start" x="28.6272" y="38.315301" transform="rotate(-0 28.6272 38.315301)">Dashboard panel: normalize mixed uplinks into source-aware node evidence</text>
+   </g>
+   <g id="text_3">
+    <text style="fill: #1f2933; font: 700 9px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="92.9088" y="107.273689" transform="rotate(-0 92.9088 107.273689)">Inputs</text>
+   </g>
+   <g id="text_4">
+    <text style="fill: #64707d; font: 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="92.9088" y="121.105552" transform="rotate(-0 92.9088 121.105552)">MQTT subscribe</text>
+   </g>
+   <g id="text_5">
+    <text style="fill: #64707d; font: 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="92.9088" y="133.501936" transform="rotate(-0 92.9088 133.501936)">CoAP receiver</text>
+   </g>
+   <g id="text_6">
+    <text style="fill: #64707d; font: 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="92.9088" y="145.856133" transform="rotate(-0 92.9088 145.856133)">HTTP ingest</text>
+   </g>
+   <g id="text_7">
+    <text style="fill: #64707d; font: 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="92.9088" y="158.338579" transform="rotate(-0 92.9088 158.338579)">REST pull</text>
+   </g>
+   <g id="text_8">
+    <text style="fill: #1f2933; font: 700 9px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="269.6832" y="107.273689" transform="rotate(-0 269.6832 107.273689)">Normalizer</text>
+   </g>
+   <g id="text_9">
+    <text style="fill: #64707d; font: 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="269.6832" y="121.105552" transform="rotate(-0 269.6832 121.105552)">nodeId aliases</text>
+   </g>
+   <g id="text_10">
+    <text style="fill: #64707d; font: 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="269.6832" y="133.501936" transform="rotate(-0 269.6832 133.501936)">GPS aliases</text>
+   </g>
+   <g id="text_11">
+    <text style="fill: #64707d; font: 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="269.6832" y="145.89832" transform="rotate(-0 269.6832 145.89832)">mode labels</text>
+   </g>
+   <g id="text_12">
+    <text style="fill: #64707d; font: 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="269.6832" y="158.294704" transform="rotate(-0 269.6832 158.294704)">fresh source</text>
+   </g>
+   <g id="text_13">
+    <text style="fill: #1f2933; font: 700 9px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="446.4576" y="107.273689" transform="rotate(-0 446.4576 107.273689)">Web evidence</text>
+   </g>
+   <g id="text_14">
+    <text style="fill: #64707d; font: 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="446.4576" y="121.105552" transform="rotate(-0 446.4576 121.105552)">cards</text>
+   </g>
+   <g id="text_15">
+    <text style="fill: #64707d; font: 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="446.4576" y="133.459749" transform="rotate(-0 446.4576 133.459749)">badges</text>
+   </g>
+   <g id="text_16">
+    <text style="fill: #64707d; font: 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="446.4576" y="145.89832" transform="rotate(-0 446.4576 145.89832)">map</text>
+   </g>
+   <g id="text_17">
+    <text style="fill: #64707d; font: 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="446.4576" y="158.252517" transform="rotate(-0 446.4576 158.252517)">history</text>
+   </g>
+   <g id="text_18">
+    <text style="fill: #12606b; font: 700 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="105.76512" y="204.547815" transform="rotate(-0 105.76512 204.547815)">MQTT</text>
+   </g>
+   <g id="text_19">
+    <text style="fill: #e8a23a; font: 700 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="175.9392" y="204.547815" transform="rotate(-0 175.9392 204.547815)">TLS</text>
+   </g>
+   <g id="text_20">
+    <text style="fill: #315f9d; font: 700 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="261.11232" y="204.547815" transform="rotate(-0 261.11232 204.547815)">COAP</text>
+   </g>
+   <g id="text_21">
+    <text style="fill: #c95f66; font: 700 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="341.46432" y="204.547815" transform="rotate(-0 341.46432 204.547815)">DTLS</text>
+   </g>
+   <g id="text_22">
+    <text style="fill: #4f9b6e; font: 700 7.2px 'Arial', 'DejaVu Sans', 'Liberation Sans', sans-serif; text-anchor: middle" x="422.352" y="204.547815" transform="rotate(-0 422.352 204.547815)">GPS</text>
+   </g>
   </g>
-  <g filter="url(#shadow)">
-    <rect x="798" y="164" width="240" height="244" rx="24" fill="#F9FFFB"/>
-    <text x="832" y="215" fill="#173A33" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="800">Dashboard</text>
-    <rect x="832" y="244" width="172" height="92" rx="18" fill="#E8F6EF" stroke="#BDD8CE"/>
-    <circle cx="874" cy="290" r="25" fill="#1E7469"/>
-    <path d="M874 273C862 273 854 282 854 292C854 308 874 320 874 320C874 320 894 308 894 292C894 282 886 273 874 273Z" fill="#F7C948"/>
-    <circle cx="874" cy="292" r="6" fill="#1E7469"/>
-    <rect x="915" y="269" width="68" height="9" rx="4.5" fill="#99C6B8"/>
-    <rect x="915" y="292" width="50" height="9" rx="4.5" fill="#99C6B8"/>
-    <rect x="832" y="360" width="172" height="14" rx="7" fill="#99C6B8"/>
-  </g>
-  <path d="M318 286H414" stroke="#F7C948" stroke-width="6" stroke-linecap="round" marker-end="url(#arrow)"/>
-  <path d="M686 286H782" stroke="#F7C948" stroke-width="6" stroke-linecap="round" marker-end="url(#arrow)"/>
+ </g>
+ <defs>
+  <clipPath id="p647725a0fe">
+   <rect x="7.2" y="7.2" width="535.68" height="238.392"/>
+  </clipPath>
+ </defs>
 </svg>
-

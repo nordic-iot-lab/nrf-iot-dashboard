@@ -1,6 +1,6 @@
 # nRF IoT Dashboard
 
-![Dashboard data flow](docs/dashboard-flow.svg)
+![Dashboard data flow](docs/dashboard-flow.png)
 
 > 中文：面向 nRF/NB-IoT 节点的 Web 面板，统一展示 MQTT、CoAP、HTTP 和 REST 拉取进入的数据，支持节点卡片、历史趋势和 GPS 地图。
 >
@@ -133,7 +133,7 @@ MQTT_ALLOW_INSECURE_TLS=false
 Current dashboard baseline:
 
 ```text
-v0.9.1
+v0.9.2
 ```
 
 Previous production test baseline: `v0.9.0`.
