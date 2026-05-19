@@ -1,6 +1,5 @@
-const { Pool } = require("pg");
+const { getPool, isPostgresEnabled } = require("./db");
 
-let pool = null;
 let schemaReady = false;
 let initPromise = null;
 
@@ -17,39 +16,8 @@ function maybeParsePayload(raw) {
   return {};
 }
 
-function isEnabled(config) {
-  return Boolean(
-    config.PG_ENABLED &&
-      config.PG_HOST &&
-      config.PG_DATABASE &&
-      config.PG_USER &&
-      config.PG_PASSWORD
-  );
-}
-
-function getPool(config) {
-  if (!isEnabled(config)) {
-    return null;
-  }
-
-  if (!pool) {
-    pool = new Pool({
-      host: config.PG_HOST,
-      port: Number(config.PG_PORT || 5432),
-      database: config.PG_DATABASE,
-      user: config.PG_USER,
-      password: config.PG_PASSWORD,
-      ssl: config.PG_SSL ? { rejectUnauthorized: false } : false,
-      connectionTimeoutMillis: Number(config.PG_CONNECT_TIMEOUT_MS || 3000),
-      query_timeout: Number(config.PG_QUERY_TIMEOUT_MS || 4000)
-    });
-  }
-
-  return pool;
-}
-
 async function ensureSchema(config) {
-  if (!isEnabled(config)) {
+  if (!isPostgresEnabled(config)) {
     return false;
   }
 
@@ -91,7 +59,7 @@ async function ensureSchema(config) {
 }
 
 async function storeTelemetryMessage(config, message) {
-  if (!isEnabled(config)) {
+  if (!isPostgresEnabled(config)) {
     return false;
   }
 
@@ -113,7 +81,7 @@ async function storeTelemetryMessage(config, message) {
 }
 
 async function loadLatestTelemetry(config, limit = 1000) {
-  if (!isEnabled(config)) {
+  if (!isPostgresEnabled(config)) {
     return [];
   }
 

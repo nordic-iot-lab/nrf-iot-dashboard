@@ -9,6 +9,7 @@ const {
   buildNodeRecord,
   createHistoryStore
 } = require("../server/historyStore");
+const { resetPool } = require("../server/db");
 
 test("topicForNodeId should map node id to sensor topic", () => {
   assert.equal(topicForNodeId("A1B2"), "sensor/a1b2/data");
@@ -98,6 +99,7 @@ test("history store should query telemetry_messages before legacy mqtt_messages"
     assert.equal(queries.some((text) => text.includes("telemetry_messages")), true);
   } finally {
     require("pg").Pool.prototype.query = originalQuery;
+    await resetPool();
   }
 });
 
@@ -143,5 +145,6 @@ test("history store should use node_id lookup so coap records are queryable", as
     assert.equal(calls[0].values[0], "coap01");
   } finally {
     require("pg").Pool.prototype.query = originalQuery;
+    await resetPool();
   }
 });

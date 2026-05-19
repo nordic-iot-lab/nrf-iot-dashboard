@@ -1,4 +1,5 @@
 const coap = require("coap");
+const crypto = require("crypto");
 const { upsertNodeTelemetry } = require("./nodeStore");
 const { storeTelemetryMessage } = require("./telemetryStore");
 
@@ -10,6 +11,24 @@ function getNodeIdFromPath(urlPath) {
   return "unknown";
 }
 
+function safeTokenEquals(actual, expected) {
+  const actualBuffer = Buffer.from(String(actual || ""));
+  const expectedBuffer = Buffer.from(String(expected || ""));
+  if (actualBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
+function stripAuthFields(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return {};
+  }
+
+  const { token, authToken, ...cleanPayload } = payload;
+  return cleanPayload;
+}
+
 function startCoapIngest(config) {
   if (!config.COAP_ENABLED) {
     console.log("[coap] disabled");
@@ -19,6 +38,10 @@ function startCoapIngest(config) {
   const port = Number(config.COAP_PORT || 5683);
   const host = config.COAP_HOST || "0.0.0.0";
   const server = coap.createServer();
+  const expectedToken = String(config.COAP_AUTH_TOKEN || "").trim();
+  if (!expectedToken) {
+    console.warn("[coap] COAP_AUTH_TOKEN is not set - CoAP ingest is unauthenticated");
+  }
 
   server.on("request", (req, res) => {
     const method = req.method || "";
@@ -40,13 +63,20 @@ function startCoapIngest(config) {
       return;
     }
 
+    if (expectedToken && !safeTokenEquals(String(payload.token || payload.authToken || "").trim(), expectedToken)) {
+      res.code = "4.01";
+      res.end("unauthorized");
+      return;
+    }
+
+    const cleanPayload = stripAuthFields(payload);
     const fallbackNodeId = getNodeIdFromPath(pathName);
-    const saved = upsertNodeTelemetry(payload, fallbackNodeId, { source: "coap" });
+    const saved = upsertNodeTelemetry(cleanPayload, fallbackNodeId, { source: "coap" });
     storeTelemetryMessage(config, {
       nodeId: saved.nodeId,
       topic: `coap:${pathName}`,
       source: "coap",
-      payload
+      payload: cleanPayload
     }).catch((err) => {
       console.warn(`[pg] coap store failed: ${err.message}`);
     });
@@ -68,4 +98,4 @@ function startCoapIngest(config) {
   return server;
 }
 
-module.exports = { startCoapIngest };
+module.exports = { startCoapIngest, stripAuthFields };

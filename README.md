@@ -17,7 +17,7 @@
 - 展示温湿度、电池、电压、RSSI、CO2、GPS 等字段
 - 在 OpenStreetMap/Leaflet 地图上查看节点位置
 - 从 PostgreSQL 查询历史趋势
-- 作为部署在 `nrf.mecho.top` 这类域名后的 Web 控制台
+- 作为部署在自有 HTTPS 域名后的 Web 控制台
 
 ## English Overview
 
@@ -30,7 +30,7 @@ Useful for:
 - Displaying temperature, humidity, battery, voltage, RSSI, CO2, and GPS fields
 - Showing node positions on an OpenStreetMap/Leaflet map
 - Querying historical trends from PostgreSQL
-- Running behind a production web domain such as `nrf.mecho.top`
+- Running behind your production HTTPS domain
 
 ## Data Flow / 数据流
 
@@ -77,7 +77,8 @@ docker compose logs -f
 - `POST /api/internal/store`
 - `POST /api/pull-once`
 
-Write endpoints require `API_WRITE_TOKEN` when enabled.
+Write endpoints require `API_WRITE_TOKEN`. Read endpoints are public by default for lab use;
+set `READ_AUTH_TOKEN` before exposing the dashboard publicly.
 
 ## Payload Example / 数据示例
 
@@ -111,29 +112,36 @@ Accepted aliases include:
 - Battery: `battery`, `battery_mv`, `battery_pct`
 - GPS: `lat/lng`, `lat/lon`, `latitude/longitude`, `gps.lat/gps.lon`, `location.latitude/location.longitude`
 
-## Mecho Deployment Profile / Mecho 部署配置
+## Production Deployment Profile / 生产部署配置
 
-- Web panel: `https://nrf.mecho.top`
-- MQTT backend ingest: `mqtts://mqtt.mecho.top:8883`
+- Web panel: `https://your-dashboard.example`
+- MQTT backend ingest: `mqtts://your-mqtt.example:8883`
 - MQTT topic: `sensor/+/data`
-- Optional REST snapshot: `GET https://coap.mecho.top/sensor`
+- Optional REST snapshot: `GET https://your-ingest.example/sensor`
 
 When EMQX is the single ingress, keep direct CoAP disabled in this service:
 
 ```env
 COAP_ENABLED=false
-MQTT_BROKER_URL=mqtts://mqtt.mecho.top:8883
+MQTT_BROKER_URL=mqtts://your-mqtt.example:8883
 MQTT_TOPIC=sensor/+/data
 MQTT_CA_CERT_PATH=/app/certs/ca.pem
 MQTT_ALLOW_INSECURE_TLS=false
+READ_AUTH_TOKEN=replace_with_long_random_read_token
+API_WRITE_TOKEN=replace_with_long_random_write_token
+PG_SSL=true
+PG_SSL_REJECT_UNAUTHORIZED=true
 ```
+
+If direct CoAP ingest is enabled, set `COAP_AUTH_TOKEN` and require devices to include
+`token` or `authToken` in the JSON payload.
 
 ## Release / 版本
 
 Current dashboard baseline:
 
 ```text
-v0.9.2
+v0.9.3
 ```
 
 Previous production test baseline: `v0.9.0`.

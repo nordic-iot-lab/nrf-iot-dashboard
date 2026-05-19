@@ -1,6 +1,4 @@
-const { Pool } = require("pg");
-
-let pool = null;
+const { getPool, isPostgresEnabled } = require("./db");
 
 function maybeParsePayload(raw) {
   if (raw === null || raw === undefined) return {};
@@ -72,14 +70,7 @@ function normalizeLimit(limit, fallback = 100) {
 }
 
 function createHistoryStore(config) {
-  const enabled =
-    config.PG_ENABLED &&
-    config.PG_HOST &&
-    config.PG_DATABASE &&
-    config.PG_USER &&
-    config.PG_PASSWORD;
-
-  if (!enabled) {
+  if (!isPostgresEnabled(config)) {
     console.log("[pg] history store disabled");
     return {
       isEnabled: () => false,
@@ -87,16 +78,7 @@ function createHistoryStore(config) {
     };
   }
 
-  pool = new Pool({
-    host: config.PG_HOST,
-    port: Number(config.PG_PORT || 5432),
-    database: config.PG_DATABASE,
-    user: config.PG_USER,
-    password: config.PG_PASSWORD,
-    ssl: config.PG_SSL ? { rejectUnauthorized: false } : false,
-    connectionTimeoutMillis: Number(config.PG_CONNECT_TIMEOUT_MS || 3000),
-    query_timeout: Number(config.PG_QUERY_TIMEOUT_MS || 4000)
-  });
+  const pool = getPool(config);
 
   const topicTemplate = config.HISTORY_TOPIC_TEMPLATE || config.MQTT_TOPIC || "sensor/+/data";
   console.log(`[pg] history store enabled -> ${config.PG_HOST}:${config.PG_PORT}/${config.PG_DATABASE}`);

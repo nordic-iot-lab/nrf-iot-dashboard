@@ -208,6 +208,35 @@ test("upstream topic-like coap marker should map to coap-mqtt", async () => {
   }
 });
 
+test("upstream pull should prune stale rest snapshots only, even with mixed payload sources", async () => {
+  resetStore();
+  upsertNodeTelemetry({ temperature: 10 }, "stale-rest", { source: "rest", isSnapshot: true });
+  upsertNodeTelemetry({ temperature: 11 }, "stale-mqtt-snapshot", { source: "mqtt", isSnapshot: true });
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      nodes: [
+        { nodeId: "fresh-rest", source: "rest", temperature: 20 },
+        { nodeId: "fresh-mqtt", source: "mqtt", temperature: 21 }
+      ]
+    })
+  });
+
+  try {
+    const result = await pullOnce({ UPSTREAM_PULL_URL: "http://fake.local/sensor" });
+    assert.equal(result.ok, true);
+
+    const ids = getAllNodes()
+      .map((item) => item.nodeId)
+      .sort();
+    assert.deepEqual(ids, ["fresh-mqtt", "fresh-rest", "stale-mqtt-snapshot"]);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("getNode should normalize nodeId lookup", () => {
   resetStore();
   upsertNodeTelemetry({ mac_last4: "a1b2", temperature: 30 }, "a1b2", { source: "mqtt" });

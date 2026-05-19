@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const { loadLatestTelemetry } = require("../server/telemetryStore");
+const { resetPool } = require("../server/db");
 
 test("telemetry store should load latest message per node for startup recovery", async () => {
   const originalQuery = require("pg").Pool.prototype.query;
@@ -65,6 +66,7 @@ test("telemetry store should load latest message per node for startup recovery",
     assert.equal(queries.some((query) => /DISTINCT ON \(node_id\)/.test(queryText(query))), true);
   } finally {
     require("pg").Pool.prototype.query = originalQuery;
+    await resetPool();
   }
 });
 

@@ -22,6 +22,9 @@ function buildTlsOptions(config) {
 }
 
 function startMqttIngest(config) {
+  if (config.MQTT_ALLOW_INSECURE_TLS) {
+    console.warn("[mqtt] MQTT_ALLOW_INSECURE_TLS=true disables broker certificate verification");
+  }
   const client = mqtt.connect(config.MQTT_BROKER_URL, {
     username: config.MQTT_USERNAME || undefined,
     password: config.MQTT_PASSWORD || undefined,

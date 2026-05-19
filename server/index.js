@@ -1,4 +1,5 @@
 const path = require("path");
+const crypto = require("crypto");
 const express = require("express");
 const dotenv = require("dotenv");
 const { startMqttIngest } = require("./mqttClient");
@@ -17,6 +18,28 @@ const { ensureSchema, storeTelemetryMessage, loadLatestTelemetry } = require("./
 dotenv.config();
 
 const app = express();
+app.disable("x-powered-by");
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' https://unpkg.com",
+      "style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com",
+      "font-src https://fonts.gstatic.com",
+      "img-src 'self' data: https:",
+      "connect-src 'self'",
+      "worker-src 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "frame-ancestors 'none'"
+    ].join("; ")
+  );
+  next();
+});
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(__dirname, "..", "web")));
 
@@ -29,9 +52,11 @@ const config = {
   MQTT_CLIENT_ID: process.env.MQTT_CLIENT_ID || `nordic-web-dashboard-${Date.now()}`,
   MQTT_ALLOW_INSECURE_TLS: process.env.MQTT_ALLOW_INSECURE_TLS === "true",
   MQTT_CA_CERT_PATH: process.env.MQTT_CA_CERT_PATH || "",
+  READ_AUTH_TOKEN: process.env.READ_AUTH_TOKEN || "",
   COAP_ENABLED: process.env.COAP_ENABLED !== "false",
   COAP_HOST: process.env.COAP_HOST || "0.0.0.0",
   COAP_PORT: Number(process.env.COAP_PORT || 5683),
+  COAP_AUTH_TOKEN: process.env.COAP_AUTH_TOKEN || "",
   UPSTREAM_PULL_URL: process.env.UPSTREAM_PULL_URL || "",
   UPSTREAM_PULL_INTERVAL_MS: Number(process.env.UPSTREAM_PULL_INTERVAL_MS || 8000),
   UPSTREAM_PULL_TIMEOUT_MS: Number(process.env.UPSTREAM_PULL_TIMEOUT_MS || 5000),
@@ -45,9 +70,21 @@ const config = {
   PG_USER: process.env.PG_USER || "",
   PG_PASSWORD: process.env.PG_PASSWORD || "",
   PG_SSL: process.env.PG_SSL === "true",
+  PG_SSL_REJECT_UNAUTHORIZED: process.env.PG_SSL_REJECT_UNAUTHORIZED !== "false",
   PG_CONNECT_TIMEOUT_MS: Number(process.env.PG_CONNECT_TIMEOUT_MS || 3000),
   PG_QUERY_TIMEOUT_MS: Number(process.env.PG_QUERY_TIMEOUT_MS || 4000)
 };
+
+function safeTokenEquals(actual, expected) {
+  const actualText = String(actual || "");
+  const expectedText = String(expected || "");
+  const actualBuffer = Buffer.from(actualText);
+  const expectedBuffer = Buffer.from(expectedText);
+  if (actualBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(actualBuffer, expectedBuffer);
+}
 
 function requireWriteToken(req, res, next) {
   const expected = String(config.API_WRITE_TOKEN || "").trim();
@@ -57,7 +94,22 @@ function requireWriteToken(req, res, next) {
   }
   const auth = String(req.headers.authorization || "");
   const got = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-  if (got !== expected) {
+  if (!safeTokenEquals(got, expected)) {
+    res.status(401).json({ error: "unauthorized" });
+    return;
+  }
+  next();
+}
+
+function requireReadToken(req, res, next) {
+  const expected = String(config.READ_AUTH_TOKEN || "").trim();
+  if (!expected) {
+    next();
+    return;
+  }
+  const auth = String(req.headers.authorization || "");
+  const got = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+  if (!safeTokenEquals(got, expected)) {
     res.status(401).json({ error: "unauthorized" });
     return;
   }
@@ -66,6 +118,9 @@ function requireWriteToken(req, res, next) {
 
 if (!String(config.API_WRITE_TOKEN || "").trim()) {
   console.warn("[auth] API_WRITE_TOKEN is not set - write endpoints are disabled");
+}
+if (!String(config.READ_AUTH_TOKEN || "").trim()) {
+  console.warn("[auth] READ_AUTH_TOKEN is not set - read endpoints are public");
 }
 
 async function restoreLatestNodes() {
@@ -98,11 +153,11 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "nordic-web-dashboard", ts: Date.now() });
 });
 
-app.get("/api/nodes", (_req, res) => {
+app.get("/api/nodes", requireReadToken, (_req, res) => {
   res.json({ items: getAllNodes() });
 });
 
-app.get("/api/nodes/:nodeId", (req, res) => {
+app.get("/api/nodes/:nodeId", requireReadToken, (req, res) => {
   const found = getNode(req.params.nodeId);
   if (!found) {
     res.status(404).json({ error: "node_not_found" });
@@ -111,11 +166,11 @@ app.get("/api/nodes/:nodeId", (req, res) => {
   res.json(found);
 });
 
-app.get("/sensor", (_req, res) => {
+app.get("/sensor", requireReadToken, (_req, res) => {
   res.json(buildSensorSnapshotMap());
 });
 
-app.get("/api/nodes/:nodeId/history", async (req, res) => {
+app.get("/api/nodes/:nodeId/history", requireReadToken, async (req, res) => {
   try {
     const nodeId = String(req.params.nodeId || "").toLowerCase();
     const limit = normalizeLimit(req.query.limit, 100);
